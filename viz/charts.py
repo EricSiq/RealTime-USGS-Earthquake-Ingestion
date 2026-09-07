@@ -198,7 +198,7 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 2: Seismic Drumbeat Strip Chart (Clean Dedicated Header & Breathing Room)
+# VISUAL 2: Seismic Drumbeat Strip Chart (Clean Spacing & Stratified Visibility)
 # -----------------------------------------------------------------------------
 def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict):
     fig, ax = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
@@ -207,21 +207,46 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     # Dedicated header zone with ample breathing room
     fig.text(0.06, 0.945, "TEMPORAL SEISMIC DRUMBEAT & MAINSHOCK-AFTERSHOCK CLUSTERING", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.06, 0.908, "Continuous timeline showing temporal event clustering, energy dissipation, and tectonic swarm patterns", 
+    fig.text(0.06, 0.908, "Evenly-spaced timeline showing distinct seismic energy release (M ≥ 2.0 felt events & stratified background)", 
              color=theme["text_muted"], fontsize=10.5)
 
-    df_sorted = df.sort_values("dt_utc")
-    
+    df_sorted = df.sort_values("dt_utc").copy()
+
+    # Stratify into felt/notable events (M >= 2.0) and sampled background micro-tremors (M < 2.0)
+    # to eliminate dense overplotting while preserving temporal distribution
+    notable = df_sorted[df_sorted["magnitude"] >= 2.0]
+    micro = df_sorted[df_sorted["magnitude"] < 2.0]
+    if len(micro) > 220:
+        micro = micro.sample(n=220, random_state=42).sort_values("dt_utc")
+
+    # Plot subtle micro background dots
+    if not micro.empty:
+        ax.scatter(
+            micro["dt_utc"],
+            micro["magnitude"],
+            color=theme["text_dim"],
+            s=10,
+            alpha=0.35,
+            edgecolors="none",
+            label="Micro-seismic background (M < 2.0)",
+            zorder=2
+        )
+
+    # Plot notable events with clean, well-proportioned sizes
+    # Marker sizes scaled gently from 28 to 140
+    sizes = np.clip(28.0 + 16.0 * (notable["magnitude"] - 2.0)**1.3, 25, 140)
+
     scatter = ax.scatter(
-        df_sorted["dt_utc"],
-        df_sorted["magnitude"],
-        c=df_sorted["depth_km"],
-        cmap="coolwarm",
-        s=np.clip(20.0 * (df_sorted["magnitude"]**1.35), 18, 400),
-        alpha=0.82,
+        notable["dt_utc"],
+        notable["magnitude"],
+        c=notable["depth_km"],
+        cmap="turbo_r",
+        s=sizes,
+        alpha=0.88,
         edgecolors=theme["point_edge"],
-        linewidths=0.6,
-        zorder=3
+        linewidths=0.55,
+        label="Felt seismic events (M ≥ 2.0)",
+        zorder=4
     )
 
     # Shaded alert bands
@@ -233,16 +258,23 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     ax.axhline(4.5, color="#d97706", linestyle="--", linewidth=1.3, alpha=0.9, label="Moderate Alert (M 4.5)")
     ax.axhline(6.0, color="#dc2626", linestyle="--", linewidth=1.6, alpha=0.95, label="Major Alert (M 6.0)")
 
+    # Format Date Ticks cleanly on X-axis
+    import matplotlib.dates as mdates
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
+    formatter = mdates.ConciseDateFormatter(locator)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+
     cbar = plt.colorbar(scatter, ax=ax, pad=0.02, shrink=0.82)
     cbar.set_label("Hypocenter Depth (km)", color=theme["text_primary"], fontsize=10, fontweight="bold")
     cbar.ax.tick_params(colors=theme["text_muted"], labelsize=8.5)
     cbar.outline.set_edgecolor(theme["border"])
 
     ax.set_ylabel("Earthquake Magnitude (Mw)", color=theme["text_primary"], fontsize=11, labelpad=8)
-    ax.set_xlabel("Time (UTC)", color=theme["text_primary"], fontsize=11, labelpad=8)
-    ax.tick_params(colors=theme["text_muted"], labelsize=9)
+    ax.set_xlabel("Timeline (UTC)", color=theme["text_primary"], fontsize=11, labelpad=8)
+    ax.tick_params(colors=theme["text_muted"], labelsize=9.5)
     ax.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
-    ax.legend(facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper right")
+    ax.legend(facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper right", framealpha=0.9)
 
     for spine in ax.spines.values():
         spine.set_color(theme["border"])
