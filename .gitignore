@@ -11,6 +11,8 @@ __pycache__/
 
 # Data cache & large downloads (we track outputs/visuals and schemas, but ignore huge raw files if needed)
 data/hdfs/raw/**/*.jsonl
+data/hdfs/
+data/hbase_kv_store.json
 *.log
 
 # IDE & OS
