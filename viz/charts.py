@@ -3,9 +3,10 @@ High-Quality Scientific Visuals Generator (Light & Dark Mode Compatible)
 Renders publication-grade, ultra-high-resolution (300 DPI) scientific figures
 specifically optimized for academic reports, light-mode presentations, and posters.
 
-Themes:
-- Light Mode (Default): Clean white/slate canvas (#ffffff, #f8fafc) with crisp slate borders and high-contrast typography.
-- Dark Mode: Dark obsidian (#080c14, #111827).
+Key Enhancements:
+- Vector world continent and country outlines on global seismic map.
+- Ample, dedicated title and subtitle spacing preventing collisions or clipping.
+- Dual theme support: Light Mode (default) & Dark Mode.
 """
 
 import sys
@@ -17,19 +18,22 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROCESSED_FILE = BASE_DIR / "data" / "hdfs" / "processed" / "earthquakes" / "earthquakes_processed.parquet"
 ANALYTICS_DIR = BASE_DIR / "data" / "analytics"
 BENCHMARK_FILE = BASE_DIR / "outputs" / "benchmark_results.json"
+WORLD_GEOJSON = BASE_DIR / "data" / "world_boundaries.geojson"
 DEFAULT_OUTPUT_DIR = BASE_DIR / "outputs" / "visuals"
 
 # Theme Palettes
 THEMES = {
     "light": {
         "bg": "#ffffff",
-        "surface": "#f8fafc",
+        "surface": "#ffffff",
         "border": "#cbd5e1",
         "grid": "#e2e8f0",
         "text_primary": "#0f172a",
@@ -40,12 +44,14 @@ THEMES = {
         "hive_color": "#d97706",
         "hbase_color": "#0284c7",
         "point_edge": "#334155",
-        "box_bg": "#f1f5f9",
+        "land_fill": "#f1f5f9",
+        "land_edge": "#94a3b8",
+        "ocean_fill": "#ffffff",
         "callout_bg": "#eff6ff",
         "callout_border": "#3b82f6",
         "callout_text": "#1e3a8a",
-        "band_0": "#f1f5f9",
-        "band_1": "#e2e8f0",
+        "band_0": "#f8fafc",
+        "band_1": "#f1f5f9",
         "band_2": "#fee2e2",
         "band_3": "#fecaca"
     },
@@ -62,7 +68,9 @@ THEMES = {
         "hive_color": "#f59e0b",
         "hbase_color": "#06b6d4",
         "point_edge": "#080c14",
-        "box_bg": "#111827",
+        "land_fill": "#111827",
+        "land_edge": "#334155",
+        "ocean_fill": "#080c14",
         "callout_bg": "#1e1b4b",
         "callout_border": "#818cf8",
         "callout_text": "#ffffff",
@@ -83,66 +91,97 @@ def load_data():
     df["dt_utc"] = pd.to_datetime(df["epoch_millis"], unit="ms", utc=True)
     return df
 
+def get_world_patches():
+    if not WORLD_GEOJSON.exists():
+        return None
+    try:
+        with open(WORLD_GEOJSON, "r", encoding="utf-8") as f:
+            geojson = json.load(f)
+        patches_list = []
+        for feat in geojson.get("features", []):
+            geom = feat.get("geometry", {})
+            gtype = geom.get("type")
+            coords = geom.get("coordinates", [])
+            if gtype == "Polygon":
+                for poly in coords:
+                    patches_list.append(Polygon(poly, closed=True))
+            elif gtype == "MultiPolygon":
+                for mpoly in coords:
+                    for poly in mpoly:
+                        patches_list.append(Polygon(poly, closed=True))
+        return patches_list
+    except Exception as e:
+        print(f"[WARN] Failed to load world geojson: {e}")
+        return None
+
 # -----------------------------------------------------------------------------
-# VISUAL 1: Global Seismic Map
+# VISUAL 1: Global Seismic Map (With World Continental Outlines & Clean Spacing)
 # -----------------------------------------------------------------------------
 def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
-    fig = plt.figure(figsize=(18, 10), dpi=300, facecolor=theme["bg"])
-    ax = fig.add_subplot(111, facecolor=theme["surface"])
+    fig = plt.figure(figsize=(18, 10.5), dpi=300, facecolor=theme["bg"])
+    ax = fig.add_subplot(111, facecolor=theme["ocean_fill"])
 
-    # Equator, Prime Meridian, and Coordinates
-    ax.axhline(0, color=theme["grid"], linestyle="--", linewidth=1.2, alpha=0.8)
-    ax.axvline(0, color=theme["grid"], linestyle="--", linewidth=1.2, alpha=0.8)
+    # Dedicated header zone with generous spacing
+    fig.text(0.05, 0.955, "REAL-TIME GLOBAL SEISMIC TELEMETRY & TECTONIC EPICENTERS", 
+             color=theme["text_primary"], fontsize=18, fontweight="bold")
+    fig.text(0.05, 0.925, f"Total Events Ingested: {len(df):,}  •  Max Magnitude: M{df['magnitude'].max():.1f}  •  USGS Live Feed Ingested via HDFS Data Lake", 
+             color=theme["text_muted"], fontsize=11)
+
+    # World continent & coastline outlines
+    patches_list = get_world_patches()
+    if patches_list:
+        pcol = PatchCollection(patches_list, facecolor=theme["land_fill"], edgecolor=theme["land_edge"], linewidth=0.65, zorder=2)
+        ax.add_collection(pcol)
+
+    # Coordinate Gridlines
+    ax.axhline(0, color=theme["grid"], linestyle="--", linewidth=1.1, alpha=0.7, zorder=1)
+    ax.axvline(0, color=theme["grid"], linestyle="--", linewidth=1.1, alpha=0.7, zorder=1)
     for lat in range(-60, 90, 30):
-        ax.axhline(lat, color=theme["grid"], linestyle=":", linewidth=0.7, alpha=0.6)
+        ax.axhline(lat, color=theme["grid"], linestyle=":", linewidth=0.6, alpha=0.5, zorder=1)
     for lon in range(-180, 190, 60):
-        ax.axvline(lon, color=theme["grid"], linestyle=":", linewidth=0.7, alpha=0.6)
+        ax.axvline(lon, color=theme["grid"], linestyle=":", linewidth=0.6, alpha=0.5, zorder=1)
 
     ax.set_xlim(-180, 180)
-    ax.set_ylim(-75, 85)
+    ax.set_ylim(-70, 85)
 
-    sizes = np.clip(14.0 * np.exp(0.55 * (df["magnitude"] - 2.0)), 12, 480)
+    sizes = np.clip(14.0 * np.exp(0.55 * (df["magnitude"] - 2.0)), 12, 450)
 
-    # High contrast depth mapping
+    # Plot earthquakes
     scatter = ax.scatter(
         df["longitude"],
         df["latitude"],
         s=sizes,
         c=df["depth_km"],
         cmap="turbo_r",
-        alpha=0.82,
+        alpha=0.85,
         edgecolors=theme["point_edge"],
-        linewidths=0.6,
-        zorder=3
+        linewidths=0.55,
+        zorder=4
     )
 
-    # Highlight major / severe events (M >= 5.0)
+    # Highlight major events (M >= 5.0)
     major_events = df[df["magnitude"] >= 5.0]
     for _, row in major_events.iterrows():
-        ax.scatter(row["longitude"], row["latitude"], s=sizes.loc[_]*1.4, facecolors='none', edgecolors="#dc2626", linewidths=2.2, zorder=4)
+        ax.scatter(row["longitude"], row["latitude"], s=sizes.loc[_]*1.35, facecolors='none', edgecolors="#dc2626", linewidths=2.0, zorder=5)
         place_clean = row['place'].split(',')[-1].strip()
         ax.annotate(
-            f"M{row['magnitude']:.1f}\n{place_clean}",
+            f"M{row['magnitude']:.1f} • {place_clean}",
             xy=(row["longitude"], row["latitude"]),
-            xytext=(row["longitude"] + 4, row["latitude"] + 4),
+            xytext=(row["longitude"] + 3.5, row["latitude"] + 3.5),
             color=theme["text_primary"],
             fontsize=8.5,
             fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.35", facecolor=theme["surface"], edgecolor="#dc2626", alpha=0.95, lw=1.2),
+            bbox=dict(boxstyle="round,pad=0.3", facecolor=theme["surface"], edgecolor="#dc2626", alpha=0.95, lw=1.2),
             arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.3),
-            zorder=5
+            zorder=6
         )
 
-    # Colorbar
-    cbar = plt.colorbar(scatter, ax=ax, orientation="horizontal", pad=0.06, fraction=0.035, shrink=0.45)
+    # Horizontal colorbar
+    cbar = plt.colorbar(scatter, ax=ax, orientation="horizontal", pad=0.07, fraction=0.035, shrink=0.45)
     cbar.ax.set_facecolor(theme["bg"])
     cbar.set_label("Hypocenter Focal Depth (km)", color=theme["text_primary"], fontsize=11, labelpad=8, fontweight="bold")
     cbar.ax.tick_params(colors=theme["text_muted"], labelsize=9)
     cbar.outline.set_edgecolor(theme["border"])
-
-    ax.set_title("REAL-TIME GLOBAL SEISMIC TELEMETRY & TECTONIC EPICENTERS", color=theme["text_primary"], fontsize=18, fontweight="bold", pad=15, loc="left")
-    ax.text(0.005, 1.02, f"Total Events Ingested: {len(df):,} | Max Recorded: M{df['magnitude'].max():.1f} | USGS Live Feed Ingested via HDFS Data Lake", 
-            transform=ax.transAxes, color=theme["text_muted"], fontsize=10.5)
 
     ax.set_xlabel("Longitude (°)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax.set_ylabel("Latitude (°)", color=theme["text_primary"], fontsize=11, labelpad=8)
@@ -153,17 +192,23 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
         spine.set_linewidth(1.2)
 
     out_path = out_dir / "01_global_seismic_map.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.91])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 2: Seismic Drumbeat Strip Chart
+# VISUAL 2: Seismic Drumbeat Strip Chart (Clean Dedicated Header & Breathing Room)
 # -----------------------------------------------------------------------------
 def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict):
-    fig, ax = plt.subplots(figsize=(16, 7), dpi=300, facecolor=theme["bg"])
+    fig, ax = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
     ax.set_facecolor(theme["surface"])
+
+    # Dedicated header zone with ample breathing room
+    fig.text(0.06, 0.945, "TEMPORAL SEISMIC DRUMBEAT & MAINSHOCK-AFTERSHOCK CLUSTERING", 
+             color=theme["text_primary"], fontsize=16, fontweight="bold")
+    fig.text(0.06, 0.908, "Continuous timeline showing temporal event clustering, energy dissipation, and tectonic swarm patterns", 
+             color=theme["text_muted"], fontsize=10.5)
 
     df_sorted = df.sort_values("dt_utc")
     
@@ -188,14 +233,10 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     ax.axhline(4.5, color="#d97706", linestyle="--", linewidth=1.3, alpha=0.9, label="Moderate Alert (M 4.5)")
     ax.axhline(6.0, color="#dc2626", linestyle="--", linewidth=1.6, alpha=0.95, label="Major Alert (M 6.0)")
 
-    cbar = plt.colorbar(scatter, ax=ax, pad=0.02, shrink=0.8)
+    cbar = plt.colorbar(scatter, ax=ax, pad=0.02, shrink=0.82)
     cbar.set_label("Hypocenter Depth (km)", color=theme["text_primary"], fontsize=10, fontweight="bold")
     cbar.ax.tick_params(colors=theme["text_muted"], labelsize=8.5)
     cbar.outline.set_edgecolor(theme["border"])
-
-    ax.set_title("TEMPORAL SEISMIC DRUMBEAT & MAINSHOCK-AFTERSHOCK CLUSTERING", color=theme["text_primary"], fontsize=16, fontweight="bold", pad=12, loc="left")
-    ax.text(0.005, 1.02, "Continuous timeline showing temporal clustering, energy dissipation, and swarm patterns", 
-            transform=ax.transAxes, color=theme["text_muted"], fontsize=10)
 
     ax.set_ylabel("Earthquake Magnitude (Mw)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax.set_xlabel("Time (UTC)", color=theme["text_primary"], fontsize=11, labelpad=8)
@@ -208,7 +249,7 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
         spine.set_linewidth(1.2)
 
     out_path = out_dir / "02_seismic_drumbeat_strip.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
@@ -225,8 +266,13 @@ def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
     hdf["hour_dt"] = pd.to_datetime(hdf["hour_window"])
     hdf = hdf.sort_values("hour_dt")
 
-    fig, ax1 = plt.subplots(figsize=(16, 7), dpi=300, facecolor=theme["bg"])
+    fig, ax1 = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
     ax1.set_facecolor(theme["surface"])
+
+    fig.text(0.06, 0.945, "ROLLING HOURLY SEISMIC FREQUENCY & ENERGY SPIKE DETECTION", 
+             color=theme["text_primary"], fontsize=16, fontweight="bold")
+    fig.text(0.06, 0.908, "Empirical proof of continuous streaming ingestion throughput and automated anomaly spike detection", 
+             color=theme["text_muted"], fontsize=10.5)
 
     line1 = ax1.plot(hdf["hour_dt"], hdf["total_events"], color=theme["accent_primary"], linewidth=2.4, label="Hourly Event Count", zorder=3)
     ax1.fill_between(hdf["hour_dt"], hdf["total_events"], color=theme["accent_primary"], alpha=0.18, zorder=2)
@@ -246,10 +292,6 @@ def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
     ax2.tick_params(colors=theme["accent_secondary"], labelsize=9)
     ax2.spines["right"].set_color(theme["accent_secondary"])
 
-    ax1.set_title("ROLLING HOURLY SEISMIC FREQUENCY & ENERGY SPIKE DETECTION", color=theme["text_primary"], fontsize=16, fontweight="bold", pad=12, loc="left")
-    ax1.text(0.005, 1.02, "Empirical proof of continuous streaming ingestion and automated anomaly detection", 
-             transform=ax1.transAxes, color=theme["text_muted"], fontsize=10)
-
     ax1.set_ylabel("Earthquakes Ingested per Hour", color=theme["accent_primary"], fontsize=11, labelpad=8)
     ax1.set_xlabel("Time (Hourly Partition Windows)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax1.tick_params(colors=theme["text_muted"], labelsize=9)
@@ -264,7 +306,7 @@ def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
         spine.set_linewidth(1.2)
 
     out_path = out_dir / "03_hourly_activity_spikes.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
@@ -273,8 +315,13 @@ def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
 # VISUAL 4: Depth vs Magnitude Scatter
 # -----------------------------------------------------------------------------
 def generate_depth_vs_magnitude_scatter(df: pd.DataFrame, out_dir: Path, theme: dict):
-    fig = plt.figure(figsize=(15, 9), dpi=300, facecolor=theme["bg"])
-    gs = gridspec.GridSpec(4, 4, figure=fig, wspace=0.15, hspace=0.15)
+    fig = plt.figure(figsize=(15, 9.5), dpi=300, facecolor=theme["bg"])
+    gs = gridspec.GridSpec(4, 4, figure=fig, wspace=0.15, hspace=0.15, top=0.88)
+
+    fig.text(0.08, 0.955, "FOCAL DEPTH VS. MAGNITUDE CORRELATION & WADATI-BENIOFF PATTERNS", 
+             color=theme["text_primary"], fontsize=16, fontweight="bold")
+    fig.text(0.08, 0.925, "Explores seismic dissipation across shallow crustal fault lines and deep subduction zone mantle slabs", 
+             color=theme["text_muted"], fontsize=10.5)
 
     ax_main = fig.add_subplot(gs[1:4, 0:3], facecolor=theme["surface"])
     ax_histx = fig.add_subplot(gs[0, 0:3], facecolor=theme["surface"], sharex=ax_main)
@@ -314,8 +361,6 @@ def generate_depth_vs_magnitude_scatter(df: pd.DataFrame, out_dir: Path, theme: 
             spine.set_color(theme["border"])
             spine.set_linewidth(1.1)
 
-    fig.suptitle("FOCAL DEPTH VS. MAGNITUDE CORRELATION & WADATI-BENIOFF PATTERNS", color=theme["text_primary"], fontsize=16, fontweight="bold", x=0.08, y=0.96, ha="left")
-
     out_path = out_dir / "04_depth_vs_magnitude_scatter.png"
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
@@ -335,8 +380,13 @@ def generate_latency_benchmark_chart(out_dir: Path, theme: dict):
     hbase_mean = bdata["hbase"]["mean_ms"]
     speedup = bdata["speedup_factor"]
 
-    fig, ax = plt.subplots(figsize=(14, 8), dpi=300, facecolor=theme["bg"])
+    fig, ax = plt.subplots(figsize=(14, 8.2), dpi=300, facecolor=theme["bg"])
     ax.set_facecolor(theme["surface"])
+
+    fig.text(0.06, 0.945, "EMPIRICAL LATENCY BENCHMARK: APACHE HIVE VS. APACHE HBASE", 
+             color=theme["text_primary"], fontsize=16, fontweight="bold")
+    fig.text(0.06, 0.908, "Query: 'Retrieve 10 most recent earthquakes in California' across 50 benchmark iterations", 
+             color=theme["text_muted"], fontsize=10.5)
 
     systems = ["Apache Hive (HDFS OLAP Scan)", "Apache HBase (Prefix Seek)"]
     latencies = [hive_mean, hbase_mean]
@@ -355,10 +405,6 @@ def generate_latency_benchmark_chart(out_dir: Path, theme: dict):
             transform=ax.transAxes, ha="center", va="center", fontsize=15, fontweight="bold",
             color=theme["callout_text"], bbox=dict(boxstyle="round,pad=0.6", facecolor=theme["callout_bg"], edgecolor=theme["callout_border"], lw=2.0))
 
-    ax.set_title("EMPIRICAL LATENCY BENCHMARK: APACHE HIVE VS. APACHE HBASE", color=theme["text_primary"], fontsize=16, fontweight="bold", pad=12, loc="left")
-    ax.text(0.005, 1.02, "Query: 'Retrieve 10 most recent earthquakes in California' across 50 benchmark iterations", 
-            transform=ax.transAxes, color=theme["text_muted"], fontsize=10)
-
     ax.set_xlabel("Query Response Latency (Milliseconds, Logarithmic Scale)", color=theme["text_primary"], fontsize=11, labelpad=10)
     ax.tick_params(colors=theme["text_primary"], labelsize=11)
     ax.grid(True, which="both", linestyle=":", alpha=0.4, color=theme["grid"])
@@ -368,7 +414,7 @@ def generate_latency_benchmark_chart(out_dir: Path, theme: dict):
         spine.set_linewidth(1.2)
 
     out_path = out_dir / "05_hive_vs_hbase_latency.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
@@ -382,13 +428,18 @@ def generate_regional_risk_matrix(out_dir: Path, theme: dict):
         return
 
     rdf = pd.read_csv(reg_file).head(8)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7), dpi=300, facecolor=theme["bg"])
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
+
+    fig.text(0.06, 0.945, "REGIONAL SEISMIC ACTIVITY & HAZARD SCORECARD", 
+             color=theme["text_primary"], fontsize=16, fontweight="bold")
+    fig.text(0.06, 0.908, "Comparative evaluation of total event volume versus peak Richter magnitude across monitored zones", 
+             color=theme["text_muted"], fontsize=10.5)
 
     # Panel 1
     bars1 = ax1.barh(rdf["region"], rdf["event_count"], color=theme["accent_primary"], edgecolor=theme["border"], height=0.55, zorder=3)
     ax1.set_facecolor(theme["surface"])
     ax1.invert_yaxis()
-    ax1.set_title("Seismic Activity Count by Region", color=theme["text_primary"], fontsize=13, fontweight="bold")
+    ax1.set_title("Seismic Activity Count by Region", color=theme["text_primary"], fontsize=13, fontweight="bold", pad=12)
     ax1.set_xlabel("Event Count", color=theme["text_muted"], fontsize=10)
     ax1.tick_params(colors=theme["text_primary"], labelsize=9.5)
     ax1.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
@@ -400,7 +451,7 @@ def generate_regional_risk_matrix(out_dir: Path, theme: dict):
     bars2 = ax2.barh(rdf["region"], rdf["max_magnitude"], color="#dc2626", edgecolor=theme["border"], height=0.55, zorder=3)
     ax2.set_facecolor(theme["surface"])
     ax2.invert_yaxis()
-    ax2.set_title("Peak Magnitude Recorded (Mw)", color=theme["text_primary"], fontsize=13, fontweight="bold")
+    ax2.set_title("Peak Magnitude Recorded (Mw)", color=theme["text_primary"], fontsize=13, fontweight="bold", pad=12)
     ax2.set_xlabel("Max Magnitude (Richter Scale)", color=theme["text_muted"], fontsize=10)
     ax2.tick_params(colors=theme["text_primary"], labelsize=9.5)
     ax2.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
@@ -413,10 +464,8 @@ def generate_regional_risk_matrix(out_dir: Path, theme: dict):
             spine.set_color(theme["border"])
             spine.set_linewidth(1.2)
 
-    fig.suptitle("REGIONAL SEISMIC ACTIVITY & HAZARD SCORECARD", color=theme["text_primary"], fontsize=16, fontweight="bold", x=0.08, y=0.98, ha="left")
-
     out_path = out_dir / "06_regional_risk_matrix.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.89])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
@@ -425,19 +474,18 @@ def generate_regional_risk_matrix(out_dir: Path, theme: dict):
 # VISUAL 7: Hadoop Architecture Infographic
 # -----------------------------------------------------------------------------
 def generate_architecture_infographic(out_dir: Path, theme: dict):
-    fig, ax = plt.subplots(figsize=(16, 9), dpi=300, facecolor=theme["bg"])
+    fig, ax = plt.subplots(figsize=(16, 9.2), dpi=300, facecolor=theme["bg"])
     ax.set_facecolor(theme["bg"])
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
     ax.axis("off")
 
-    ax.text(5, 94, "HADOOP ECOSYSTEM BIG DATA ARCHITECTURE", color=theme["text_primary"], fontsize=20, fontweight="bold")
-    ax.text(5, 90, "Real-Time Ingestion, Distributed Data Lake, Analytical OLAP & Low-Latency Serving Pipeline", color=theme["text_muted"], fontsize=11)
+    fig.text(0.05, 0.945, "HADOOP ECOSYSTEM BIG DATA ARCHITECTURE", color=theme["text_primary"], fontsize=20, fontweight="bold")
+    fig.text(0.05, 0.91, "Real-Time Ingestion, Distributed Data Lake, Analytical OLAP & Low-Latency Serving Pipeline", color=theme["text_muted"], fontsize=11)
 
     def draw_box(x, y, w, h, title, subtitle, header_color, border_color):
         rect = patches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=1.2", facecolor=theme["surface"], edgecolor=border_color, linewidth=1.6)
         ax.add_patch(rect)
-        # Header strip
         head_rect = patches.FancyBboxPatch((x, y + h - 6), w, 6, boxstyle="round,pad=0.2", facecolor=header_color, edgecolor=border_color, linewidth=0.5)
         ax.add_patch(head_rect)
         ax.text(x + w/2, y + h - 3.2, title, ha="center", va="center", color="#ffffff", fontsize=10.5, fontweight="bold")
@@ -462,7 +510,7 @@ def generate_architecture_infographic(out_dir: Path, theme: dict):
     draw_arrow(74, 31, 77, 48, "< 1ms Seeks")
 
     out_path = out_dir / "07_hadoop_architecture_infographic.png"
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.90])
     plt.savefig(out_path, dpi=300, facecolor=theme["bg"])
     plt.close()
     print(f"  [OK] Saved: {out_path.name}")
