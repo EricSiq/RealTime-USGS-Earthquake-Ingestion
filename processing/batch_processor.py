@@ -19,15 +19,17 @@ RAW_HDFS_DIR = BASE_DIR / "data" / "hdfs" / "raw" / "earthquakes"
 PROCESSED_HDFS_DIR = BASE_DIR / "data" / "hdfs" / "processed" / "earthquakes"
 ANALYTICS_DIR = BASE_DIR / "data" / "analytics"
 
+import re
+
 def classify_region(place: str) -> str:
     if not place:
         return "GLOBAL_OTHER"
     p = place.upper()
-    if "CALIFORNIA" in p or "CA" in p:
+    if "CALIFORNIA" in p or re.search(r"\bCA\b", p):
         return "CALIFORNIA"
-    if "ALASKA" in p or "AK" in p:
+    if "ALASKA" in p or re.search(r"\bAK\b", p):
         return "ALASKA"
-    if "HAWAII" in p or "HI" in p:
+    if "HAWAII" in p or re.search(r"\bHI\b", p):
         return "HAWAII"
     if "JAPAN" in p:
         return "JAPAN"
@@ -41,7 +43,7 @@ def classify_region(place: str) -> str:
         return "MEXICO"
     if "NEW ZEALAND" in p:
         return "NEW_ZEALAND"
-    if "PUERTO RICO" in p:
+    if "PUERTO RICO" in p or re.search(r"\bPR\b", p):
         return "PUERTO_RICO"
     if "TURKEY" in p or "TÜRKIYE" in p:
         return "TURKEY"

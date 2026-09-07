@@ -9,6 +9,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --accent: #0284c7;
+      --amber: #d97706;
+      --rose: #dc2626;
+      --green: #059669;
+      --text: #0f172a;
+      --muted: #475569;
+      --img-bg: #f1f5f9;
+      --shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    body.dark-theme {
       --bg: #080c14;
       --surface: #111827;
       --border: #1f293d;
@@ -18,6 +31,8 @@
       --green: #10b981;
       --text: #f8fafc;
       --muted: #94a3b8;
+      --img-bg: #05080f;
+      --shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -26,12 +41,18 @@
       font-family: 'Inter', sans-serif;
       padding: 40px 24px;
       line-height: 1.6;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .container { max-width: 1400px; margin: 0 auto; }
     header {
-      margin-bottom: 40px;
+      margin-bottom: 36px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
     }
     .badge {
       display: inline-block;
@@ -41,47 +62,65 @@
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 12px;
-      background: rgba(0, 240, 255, 0.1);
+      margin-bottom: 10px;
+      background: rgba(2, 132, 199, 0.1);
       color: var(--accent);
       border: 1px solid var(--accent);
     }
     h1 {
-      font-size: 36px;
+      font-size: 34px;
       font-weight: 800;
       letter-spacing: -0.02em;
-      margin-bottom: 10px;
-      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
     }
-    p.lead { font-size: 18px; color: var(--muted); max-width: 900px; }
+    p.lead { font-size: 16px; color: var(--muted); max-width: 850px; }
     
+    .theme-toggle-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+    }
+    .theme-toggle-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
     .stats-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
-      margin-bottom: 48px;
+      margin-bottom: 40px;
     }
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
+      box-shadow: var(--shadow);
     }
     .stat-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
-    .stat-val { font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-top: 4px; }
+    .stat-val { font-size: 30px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-top: 4px; }
     
     .visual-section {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
       overflow: hidden;
-      margin-bottom: 48px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 44px;
+      box-shadow: var(--shadow);
     }
     .visual-header {
-      padding: 24px 28px;
+      padding: 22px 28px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -89,18 +128,19 @@
       flex-wrap: wrap;
       gap: 12px;
     }
-    .visual-title { font-size: 20px; font-weight: 700; color: #ffffff; }
+    .visual-title { font-size: 19px; font-weight: 700; color: var(--text); }
     .visual-desc { font-size: 14px; color: var(--muted); margin-top: 4px; }
     .visual-tag {
       font-size: 11px;
       font-family: 'JetBrains Mono', monospace;
       padding: 4px 10px;
       border-radius: 6px;
-      background: #1e293b;
-      color: #cbd5e1;
+      background: var(--bg);
+      color: var(--muted);
+      border: 1px solid var(--border);
     }
     .visual-img-wrap {
-      background: #05080f;
+      background: var(--img-bg);
       padding: 16px;
       text-align: center;
     }
@@ -108,17 +148,17 @@
       max-width: 100%;
       height: auto;
       border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-      transition: transform 0.2s ease;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
     }
     .visual-footer {
-      padding: 16px 28px;
-      background: rgba(15, 23, 42, 0.4);
+      padding: 14px 28px;
+      background: var(--bg);
       border-top: 1px solid var(--border);
       font-size: 13px;
       color: var(--muted);
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
     .btn-download {
       color: var(--accent);
@@ -132,19 +172,26 @@
 <body>
   <div class="container">
     <header>
-      <div class="badge">Big Data Analytics Case Study</div>
-      <h1>Real-Time Global Seismic Pipeline: High-Quality Visuals</h1>
-      <p class="lead">Methodical implementation of live USGS streaming, partitioned HDFS storage, Apache Hive batch aggregations, Apache HBase sub-millisecond serving, and high-DPI scientific visuals.</p>
+      <div>
+        <div class="badge">Big Data Analytics Case Study</div>
+        <h1>Real-Time Global Seismic Pipeline: Scientific Visuals</h1>
+        <p class="lead">Methodical implementation of live USGS streaming, partitioned HDFS storage, Apache Hive batch aggregations, Apache HBase sub-millisecond serving, and publication-ready scientific visuals.</p>
+      </div>
+      <div>
+        <button class="theme-toggle-btn" onclick="toggleTheme()">
+          <span id="theme-icon">🌙</span> <span id="theme-text">Switch to Dark Mode</span>
+        </button>
+      </div>
     </header>
 
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-title">Ingested Seismic Events</div>
+        <div class="stat-title">Ingested Events</div>
         <div class="stat-val">2,011</div>
       </div>
       <div class="stat-card">
         <div class="stat-title">HDFS Storage Layout</div>
-        <div class="stat-val" style="color:#a855f7;">Hourly Partitioned</div>
+        <div class="stat-val" style="color:#9333ea;">Hourly Partitioned</div>
       </div>
       <div class="stat-card">
         <div class="stat-title">HBase Query Latency</div>
@@ -161,18 +208,18 @@
       <div class="visual-header">
         <div>
           <div class="visual-title">1. Real-Time Global Seismic Telemetry & Epicenters</div>
-          <div class="visual-desc">Global equirectangular projection mapping earthquake epicenters. Point diameter is exponentially scaled to radiated seismic energy; color represents hypocenter focal depth (shallow coral to deep mantle).</div>
+          <div class="visual-desc">Global projection mapping earthquake epicenters. Point diameter is scaled exponentially to radiated energy; color maps hypocenter focal depth.</div>
         </div>
         <span class="visual-tag">300 DPI • 5400×3000px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/01_global_seismic_map.png" target="_blank">
-          <img src="visuals/01_global_seismic_map.png" alt="Global Seismic Map">
+        <a href="visuals/01_global_seismic_map.png" target="_blank" class="img-link">
+          <img src="visuals/01_global_seismic_map.png" alt="Global Seismic Map" class="chart-img" data-filename="01_global_seismic_map.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: HDFS Raw Landing & Hive Processed Layer</span>
-        <a class="btn-download" href="visuals/01_global_seismic_map.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/01_global_seismic_map.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -181,18 +228,18 @@
       <div class="visual-header">
         <div>
           <div class="visual-title">2. Temporal Seismic Drumbeat & Aftershock Swarms</div>
-          <div class="visual-desc">Continuous temporal scatter revealing energy clustering, aftershock sequences, and severity classification bands (Moderate M4.5, Major M6.0).</div>
+          <div class="visual-desc">Continuous temporal scatter revealing energy clustering, aftershock sequences, and severity alert classification bands.</div>
         </div>
         <span class="visual-tag">300 DPI • 4800×2100px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/02_seismic_drumbeat_strip.png" target="_blank">
-          <img src="visuals/02_seismic_drumbeat_strip.png" alt="Seismic Drumbeat Strip">
+        <a href="visuals/02_seismic_drumbeat_strip.png" target="_blank" class="img-link">
+          <img src="visuals/02_seismic_drumbeat_strip.png" alt="Seismic Drumbeat Strip" class="chart-img" data-filename="02_seismic_drumbeat_strip.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: Hive Time-Series Window Analytics</span>
-        <a class="btn-download" href="visuals/02_seismic_drumbeat_strip.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/02_seismic_drumbeat_strip.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -201,18 +248,18 @@
       <div class="visual-header">
         <div>
           <div class="visual-title">3. Rolling Hourly Activity Frequency & Anomaly Spikes</div>
-          <div class="visual-desc">Hourly event count and radiated energy curves with dynamic +1.8σ threshold line, empirically proving streaming ingestion throughput.</div>
+          <div class="visual-desc">Hourly event frequency curve with dynamic +1.8σ threshold line, empirically proving streaming ingestion throughput.</div>
         </div>
         <span class="visual-tag">300 DPI • 4800×2100px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/03_hourly_activity_spikes.png" target="_blank">
-          <img src="visuals/03_hourly_activity_spikes.png" alt="Hourly Activity Spikes">
+        <a href="visuals/03_hourly_activity_spikes.png" target="_blank" class="img-link">
+          <img src="visuals/03_hourly_activity_spikes.png" alt="Hourly Activity Spikes" class="chart-img" data-filename="03_hourly_activity_spikes.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: Real-Time USGS Ingestion Daemon</span>
-        <a class="btn-download" href="visuals/03_hourly_activity_spikes.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/03_hourly_activity_spikes.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -221,18 +268,18 @@
       <div class="visual-header">
         <div>
           <div class="visual-title">4. Focal Depth vs. Magnitude Correlation</div>
-          <div class="visual-desc">Marginal distribution scatter plot showing hypocenter focal depth versus Richter magnitude, highlighting shallow crustal hazards vs deep subduction zone dissipations.</div>
+          <div class="visual-desc">Marginal distribution scatter plot showing hypocenter focal depth versus Richter magnitude and Wadati-Benioff subduction zone dynamics.</div>
         </div>
         <span class="visual-tag">300 DPI • 4500×2700px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/04_depth_vs_magnitude_scatter.png" target="_blank">
-          <img src="visuals/04_depth_vs_magnitude_scatter.png" alt="Depth vs Magnitude Scatter">
+        <a href="visuals/04_depth_vs_magnitude_scatter.png" target="_blank" class="img-link">
+          <img src="visuals/04_depth_vs_magnitude_scatter.png" alt="Depth vs Magnitude Scatter" class="chart-img" data-filename="04_depth_vs_magnitude_scatter.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: Hive/Pig Statistical Distribution Pipeline</span>
-        <a class="btn-download" href="visuals/04_depth_vs_magnitude_scatter.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/04_depth_vs_magnitude_scatter.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -246,13 +293,13 @@
         <span class="visual-tag">300 DPI • 4200×2400px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/05_hive_vs_hbase_latency.png" target="_blank">
-          <img src="visuals/05_hive_vs_hbase_latency.png" alt="Hive vs HBase Latency">
+        <a href="visuals/05_hive_vs_hbase_latency.png" target="_blank" class="img-link">
+          <img src="visuals/05_hive_vs_hbase_latency.png" alt="Hive vs HBase Latency" class="chart-img" data-filename="05_hive_vs_hbase_latency.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: Benchmark Module (benchmark/latency_comparison.py)</span>
-        <a class="btn-download" href="visuals/05_hive_vs_hbase_latency.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/05_hive_vs_hbase_latency.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -261,18 +308,18 @@
       <div class="visual-header">
         <div>
           <div class="visual-title">6. Regional Seismic Activity & Hazard Scorecard</div>
-          <div class="visual-desc">Dual-panel comparative breakdown showing total event counts and peak Richter magnitude across top seismic zones (California, Alaska, Hawaii, Japan, South Pacific).</div>
+          <div class="visual-desc">Dual-panel comparative breakdown showing total event counts and peak Richter magnitude across top global seismic zones.</div>
         </div>
         <span class="visual-tag">300 DPI • 4800×2100px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/06_regional_risk_matrix.png" target="_blank">
-          <img src="visuals/06_regional_risk_matrix.png" alt="Regional Risk Matrix">
+        <a href="visuals/06_regional_risk_matrix.png" target="_blank" class="img-link">
+          <img src="visuals/06_regional_risk_matrix.png" alt="Regional Risk Matrix" class="chart-img" data-filename="06_regional_risk_matrix.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: Hive Regional Aggregations</span>
-        <a class="btn-download" href="visuals/06_regional_risk_matrix.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/06_regional_risk_matrix.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
@@ -286,16 +333,34 @@
         <span class="visual-tag">300 DPI • 4800×2700px</span>
       </div>
       <div class="visual-img-wrap">
-        <a href="visuals/07_hadoop_architecture_infographic.png" target="_blank">
-          <img src="visuals/07_hadoop_architecture_infographic.png" alt="Architecture Infographic">
+        <a href="visuals/07_hadoop_architecture_infographic.png" target="_blank" class="img-link">
+          <img src="visuals/07_hadoop_architecture_infographic.png" alt="Architecture Infographic" class="chart-img" data-filename="07_hadoop_architecture_infographic.png">
         </a>
       </div>
       <div class="visual-footer">
         <span>Component: System Architecture Blueprint</span>
-        <a class="btn-download" href="visuals/07_hadoop_architecture_infographic.png" download>Download Full-Res PNG ↗</a>
+        <a class="btn-download" href="visuals/07_hadoop_architecture_infographic.png" download>Download 300 DPI PNG ↗</a>
       </div>
     </div>
 
   </div>
+
+  <script>
+    let isDark = false;
+    function toggleTheme() {
+      isDark = !isDark;
+      document.body.classList.toggle('dark-theme', isDark);
+      document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+      document.getElementById('theme-text').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+      
+      const imgs = document.querySelectorAll('.chart-img');
+      imgs.forEach(img => {
+        const fname = img.getAttribute('data-filename');
+        img.src = isDark ? `visuals/dark/${fname}` : `visuals/${fname}`;
+        img.parentElement.href = img.src;
+        img.closest('.visual-section').querySelector('.btn-download').href = img.src;
+      });
+    }
+  </script>
 </body>
 </html>

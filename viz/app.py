@@ -1,6 +1,6 @@
 """
 Interactive Real-Time Seismic Analytics Dashboard
-Streamlit + Plotly WebGL Dark Obsidian Theme
+Streamlit + Plotly WebGL (Light & Dark Mode Compatible)
 Simulates the Big Data Analytics presentation interface backed by HDFS, Hive, and HBase.
 """
 
@@ -29,75 +29,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Dark Obsidian Styling
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #080c14;
-        color: #f8fafc;
-        font-family: 'Segoe UI', sans-serif;
-    }
-    .metric-card {
-        background-color: #111827;
-        border: 1px solid #1f293d;
-        border-radius: 10px;
-        padding: 16px;
-        margin-bottom: 12px;
-    }
-    .metric-title {
-        font-size: 12px;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
-    }
-    .metric-val {
-        font-size: 26px;
-        font-weight: 700;
-        color: #00f0ff;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .badge-hive {
-        background-color: rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
-        border: 1px solid #f59e0b;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-    }
-    .badge-hbase {
-        background-color: rgba(6, 182, 212, 0.2);
-        color: #06b6d4;
-        border: 1px solid #06b6d4;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-@st.cache_data(ttl=60)
-def load_data():
-    if not PROCESSED_FILE.exists():
-        return pd.DataFrame()
-    df = pd.read_parquet(PROCESSED_FILE)
-    df["dt_utc"] = pd.to_datetime(df["epoch_millis"], unit="ms", utc=True)
-    return df
-
-df = load_data()
-
 # -------------------------------------------------------------
-# Sidebar Controls
+# Sidebar Theme & Ingestion Controls
 # -------------------------------------------------------------
 with st.sidebar:
     st.title("🌋 Hadoop Seismic Pipeline")
     st.caption("Real-Time Big Data Analytics Case Study")
     st.markdown("---")
 
+    theme_choice = st.radio("🎨 Interface Theme", ["Light Mode", "Dark Mode"], index=0)
+    is_dark = theme_choice == "Dark Mode"
+
     min_mag = st.slider("Minimum Magnitude (Mw)", min_value=0.0, max_value=8.0, value=2.5, step=0.1)
-    
-    regions = ["ALL"] + sorted(list(df["region"].unique())) if not df.empty else ["ALL"]
-    selected_region = st.selectbox("Tectonic Region Filter", regions)
 
     depth_range = st.slider("Focal Depth Range (km)", min_value=0, max_value=700, value=(0, 700))
 
@@ -119,6 +62,77 @@ with st.sidebar:
     st.markdown("• `ZooKeeper` - Coordination")
 
 # -------------------------------------------------------------
+# Dynamic Theme Tokens
+# -------------------------------------------------------------
+if is_dark:
+    app_bg = "#080c14"
+    card_bg = "#111827"
+    border_col = "#1f293d"
+    text_col = "#f8fafc"
+    muted_col = "#94a3b8"
+    accent_val = "#00f0ff"
+    plotly_template = "plotly_dark"
+    plot_paper_bg = "#080c14"
+    plot_surface_bg = "#111827"
+    geo_land_col = "#111827"
+    geo_ocean_col = "#080c14"
+    geo_country_col = "#1f293d"
+else:
+    app_bg = "#f8fafc"
+    card_bg = "#ffffff"
+    border_col = "#cbd5e1"
+    text_col = "#0f172a"
+    muted_col = "#475569"
+    accent_val = "#0284c7"
+    plotly_template = "plotly_white"
+    plot_paper_bg = "#ffffff"
+    plot_surface_bg = "#f8fafc"
+    geo_land_col = "#f1f5f9"
+    geo_ocean_col = "#ffffff"
+    geo_country_col = "#cbd5e1"
+
+st.markdown(f"""
+<style>
+    .stApp {{
+        background-color: {app_bg};
+        color: {text_col};
+        font-family: 'Segoe UI', sans-serif;
+    }}
+    .metric-card {{
+        background-color: {card_bg};
+        border: 1px solid {border_col};
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }}
+    .metric-title {{
+        font-size: 12px;
+        color: {muted_col};
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+    }}
+    .metric-val {{
+        font-size: 26px;
+        font-weight: 700;
+        color: {accent_val};
+        font-family: 'JetBrains Mono', monospace;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+@st.cache_data(ttl=60)
+def load_data():
+    if not PROCESSED_FILE.exists():
+        return pd.DataFrame()
+    df = pd.read_parquet(PROCESSED_FILE)
+    df["dt_utc"] = pd.to_datetime(df["epoch_millis"], unit="ms", utc=True)
+    return df
+
+df = load_data()
+
+# -------------------------------------------------------------
 # Main Dashboard Header
 # -------------------------------------------------------------
 st.title("Real-Time Global Seismic Telemetry & Hadoop Analytics")
@@ -128,7 +142,10 @@ if df.empty:
     st.warning("No processed seismic data found. Please run the ingestion script.")
     st.stop()
 
-# Filter dataset
+# Regional filter
+regions = ["ALL"] + sorted(list(df["region"].unique()))
+selected_region = st.sidebar.selectbox("Tectonic Region Filter", regions)
+
 filtered_df = df[
     (df["magnitude"] >= min_mag) &
     (df["depth_km"] >= depth_range[0]) &
@@ -137,24 +154,24 @@ filtered_df = df[
 if selected_region != "ALL":
     filtered_df = filtered_df[filtered_df["region"] == selected_region]
 
-# Top KPI Metrics Cards
+# Top KPI Metric Cards
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
     st.markdown(f"""<div class="metric-card"><div class="metric-title">Events Ingested</div><div class="metric-val">{len(filtered_df):,}</div></div>""", unsafe_allow_html=True)
 with k2:
     max_m = filtered_df["magnitude"].max() if not filtered_df.empty else 0.0
-    st.markdown(f"""<div class="metric-card"><div class="metric-title">Peak Magnitude</div><div class="metric-val" style="color:#ff0055;">M {max_m:.1f}</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card"><div class="metric-title">Peak Magnitude</div><div class="metric-val" style="color:#dc2626;">M {max_m:.1f}</div></div>""", unsafe_allow_html=True)
 with k3:
     avg_d = filtered_df["depth_km"].mean() if not filtered_df.empty else 0.0
     st.markdown(f"""<div class="metric-card"><div class="metric-title">Avg Focal Depth</div><div class="metric-val">{avg_d:.1f} km</div></div>""", unsafe_allow_html=True)
 with k4:
     tsunamis = filtered_df["tsunami_flag"].sum() if not filtered_df.empty else 0
-    st.markdown(f"""<div class="metric-card"><div class="metric-title">Tsunami Warnings</div><div class="metric-val" style="color:#f59e0b;">{tsunamis}</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card"><div class="metric-title">Tsunami Warnings</div><div class="metric-val" style="color:#d97706;">{tsunamis}</div></div>""", unsafe_allow_html=True)
 with k5:
-    st.markdown(f"""<div class="metric-card"><div class="metric-title">HBase Latency</div><div class="metric-val" style="color:#10b981;">0.28 ms</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="metric-card"><div class="metric-title">HBase Latency</div><div class="metric-val" style="color:#059669;">0.28 ms</div></div>""", unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# Visual 1: Interactive Dark Geospatial Map
+# Visual 1: Interactive Geospatial Map
 # -------------------------------------------------------------
 st.subheader("1. Interactive Global Seismic Map (WebGL Accelerated)")
 fig_map = px.scatter_geo(
@@ -165,25 +182,25 @@ fig_map = px.scatter_geo(
     size="magnitude",
     hover_name="place",
     hover_data=["magnitude", "depth_km", "alert_level", "event_time"],
-    color_continuous_scale="Plasma_r",
+    color_continuous_scale="Turbo_r",
     projection="natural earth",
     title="Real-Time Global Epicenters (Bubble Size: Magnitude | Color: Depth)"
 )
 fig_map.update_layout(
-    template="plotly_dark",
-    paper_bgcolor="#080c14",
-    plot_bgcolor="#111827",
+    template=plotly_template,
+    paper_bgcolor=plot_paper_bg,
+    plot_bgcolor=plot_surface_bg,
     margin=dict(l=0, r=0, t=40, b=0),
     geo=dict(
-        bgcolor="#080c14",
+        bgcolor=plot_paper_bg,
         showland=True,
-        landcolor="#111827",
+        landcolor=geo_land_col,
         showocean=True,
-        oceancolor="#090d16",
+        oceancolor=geo_ocean_col,
         showlakes=True,
-        lakecolor="#090d16",
+        lakecolor=geo_ocean_col,
         showcountries=True,
-        countrycolor="#1f293d"
+        countrycolor=geo_country_col
     ),
     height=550
 )
@@ -206,7 +223,7 @@ with c1:
         title="Event Magnitude over Continuous Time",
         labels={"dt_utc": "Time (UTC)", "magnitude": "Magnitude (Mw)"}
     )
-    fig_strip.update_layout(template="plotly_dark", paper_bgcolor="#080c14", plot_bgcolor="#111827", height=380)
+    fig_strip.update_layout(template=plotly_template, paper_bgcolor=plot_paper_bg, plot_bgcolor=plot_surface_bg, height=380)
     st.plotly_chart(fig_strip, use_container_width=True)
 
 with c2:
@@ -221,8 +238,8 @@ with c2:
         title="Hourly Seismic Frequency (Evidence of Streaming Ingestion)",
         labels={"hour": "Hour Window", "count": "Events / Hour"}
     )
-    fig_area.update_traces(line_color="#00f0ff")
-    fig_area.update_layout(template="plotly_dark", paper_bgcolor="#080c14", plot_bgcolor="#111827", height=380)
+    fig_area.update_traces(line_color="#0284c7" if not is_dark else "#00f0ff")
+    fig_area.update_layout(template=plotly_template, paper_bgcolor=plot_paper_bg, plot_bgcolor=plot_surface_bg, height=380)
     st.plotly_chart(fig_area, use_container_width=True)
 
 # -------------------------------------------------------------
