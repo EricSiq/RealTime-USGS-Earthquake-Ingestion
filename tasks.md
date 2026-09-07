@@ -36,58 +36,32 @@ These are the immediate steps and environment decisions you need to take on your
 These tasks will be executed methodically in strict sequence once approved:
 
 ### Phase 1: Infrastructure & Environment Setup
-- [ ] **Task A1.1: Docker Compose Stack Definition (`docker-compose.yml`)**
-  - Define multi-container Hadoop cluster: `namenode`, `datanode`, `resourcemanager`, `nodemanager`, `hive-server`, `hive-metastore`, `hbase-master`, `hbase-regionserver`, `zookeeper`.
-  - Configure port mappings (Namenode UI `9870`, ResourceManager `8088`, Hive `10000`, HBase UI `16010`).
-  - Provide a fallback lightweight standalone container / mock pipeline mode for testing without bringing down system memory.
-- [ ] **Task A1.2: Cluster Healthcheck & Verification Script**
-  - Create `scripts/verify_cluster.py` to ping HDFS, WebHDFS, YARN, and verify port readiness.
+- [x] **Task A1.1: Docker Compose Stack Definition (`docker-compose.yml`)** ✅
+- [x] **Task A1.2: Cluster Healthcheck & Verification Script (`scripts/verify_cluster.py`)** ✅
 
 ### Phase 2: Live Ingestion & HDFS Partitioning Engine
-- [ ] **Task A2.1: USGS GeoJSON Streaming Ingestion Script (`ingestion/usgs_streamer.py`)**
-  - Connect to USGS live API (e.g., "all_hour" polled every 60 seconds or "all_day" feed).
-  - Implement deduplication using USGS unique `id` and timestamp tracking.
-  - Partition raw JSON files by time window: `/raw/earthquakes/YYYY/MM/DD/HH/quakes_<timestamp>.json`.
-  - Support dual sink: directly push to HDFS via WebHDFS/Docker exec, and preserve a local mirrored cache for zero-friction visualization.
-- [ ] **Task A2.2: Automated Orchestration & Ingestion Daemon (`ingestion/daemon.py`)**
-  - Implement a configurable daemon/cron simulator to run every N minutes and log incoming seismic event batches.
+- [x] **Task A2.1: USGS GeoJSON Streaming Ingestion Script (`ingestion/usgs_streamer.py`)** ✅
+- [x] **Task A2.2: Automated Orchestration & Ingestion Daemon (`ingestion/daemon.py`)** ✅
 
 ### Phase 3: Hadoop Core & Batch Processing (HDFS, Hive, Pig)
-- [ ] **Task A3.1: HDFS Directory Hierarchy & Storage Layout**
-  - Setup `/raw/earthquakes/...` (immutable raw zone) and `/processed/earthquakes/...` (clean analytical zone).
-- [ ] **Task A3.2: Hive External Table & JSON SerDe DDL (`hive/schema.sql`)**
-  - Write Hive DDL for `earthquakes_raw` using `org.apache.hive.hcatalog.data.JsonSerDe`.
-  - Create partitioned ORC/Parquet analytical tables `earthquakes_processed` partitioned by `dt` and `alert_level`.
-- [ ] **Task A3.3: Analytical Hive / Pig Transformation Scripts (`hive/analytics.sql`, `pig/flatten_quakes.pig`)**
-  - Compute hourly seismic activity counts and rolling averages.
-  - Calculate magnitude vs depth distribution metrics and regional seismic danger scores.
-  - Pig script to demonstrate procedural schema extraction and JSON unnesting.
+- [x] **Task A3.1: HDFS Directory Hierarchy & Storage Layout** ✅
+- [x] **Task A3.2: Hive External Table & JSON SerDe DDL (`hive/schema.sql`)** ✅
+- [x] **Task A3.3: Analytical Hive / Pig Transformation Scripts (`hive/analytics.sql`, `pig/flatten_quakes.pig`, `processing/batch_processor.py`)** ✅
 
 ### Phase 4: Near-Real-Time Serving Store (HBase & ZooKeeper)
-- [ ] **Task A4.1: HBase Schema & Row-Key Architecture (`hbase/schema.hb`)**
-  - Design table `seismic_events` with column families: `event` (mag, depth, lat, lon, place, time) and `meta` (alert, tsunami, felt, status).
-  - Implement composite reverse-timestamp row-key: `<region_code>#<Long.MAX_VALUE - timestamp>` for $O(1)$ latest-first point queries.
-- [ ] **Task A4.2: HBase Batch/Stream Loader (`hbase/loader.py`)**
-  - Ingest processed earthquake records into HBase.
-- [ ] **Task A4.3: Latency Benchmark Module (`benchmark/latency_comparison.py`)**
-  - Execute identical queries on Hive (batch scan over HDFS) vs HBase (indexed row-key lookup).
-  - Generate quantifiable empirical proof showing HBase latency (<30ms) vs Hive latency (8–20s).
+- [x] **Task A4.1: HBase Schema & Row-Key Architecture (`hbase/schema.hb`)** ✅
+- [x] **Task A4.2: HBase Batch/Stream Loader (`hbase/loader.py`)** ✅
+- [x] **Task A4.3: Latency Benchmark Module (`benchmark/latency_comparison.py`)** ✅
 
 ### Phase 5: High-Quality Visualizations & Interactive Dashboard (Non-Negotiable)
-- [ ] **Task A5.1: Interactive Dark-Mode Analytics Dashboard (`viz/app.py`)**
-  - Build a sleek, modern web dashboard (Streamlit / Plotly Dark Obsidian theme `#0b0f19`).
-  - Implement responsive controls: time-window selector, minimum magnitude slider, regional filters.
-- [ ] **Task A5.2: Visual Component 1 — Live Animated Global Geospatial Map**
-  - 3D / Dark-basemap WebGL map plotting seismic coordinates.
-  - Circle radius dynamically scaled by magnitude ($M_w$ Richter scale); color gradient by hypocenter depth (shallow coral-red to deep oceanic cyan).
-  - Time-slider animation showing earthquake propagation over the past 24 hours.
-- [ ] **Task A5.3: Visual Component 2 — Seismic Strip & Spike Alert Visualizer**
-  - Strip plot of magnitude over continuous time showing seismic clustering/aftershocks.
-  - Rolling hourly frequency area chart with dynamic threshold spike detection (proving live streaming ingestion).
-- [ ] **Task A5.4: Visual Component 3 — Depth vs Magnitude Analytical Scatter**
-  - Scientific scatter plot with marginal distribution histograms and regional color encoding.
-- [ ] **Task A5.5: Visual Component 4 — Hive vs HBase Latency Benchmark Graphic**
-  - Side-by-side benchmark visual comparing query response times to clearly justify the role of NoSQL HBase vs Batch Hive.
+- [x] **Task A5.1: Interactive Dark-Mode Analytics Dashboard (`viz/app.py`)** ✅
+- [x] **Task A5.2: Visual Component 1 — Live Global Geospatial Map (`outputs/visuals/01_global_seismic_map.png`)** ✅
+- [x] **Task A5.3: Visual Component 2 — Seismic Strip & Alert Visualizer (`outputs/visuals/02_seismic_drumbeat_strip.png`)** ✅
+- [x] **Task A5.4: Visual Component 3 — Rolling Hourly Activity Frequency (`outputs/visuals/03_hourly_activity_spikes.png`)** ✅
+- [x] **Task A5.5: Visual Component 4 — Depth vs Magnitude Analytical Scatter (`outputs/visuals/04_depth_vs_magnitude_scatter.png`)** ✅
+- [x] **Task A5.6: Visual Component 5 — Hive vs HBase Latency Benchmark Graphic (`outputs/visuals/05_hive_vs_hbase_latency.png`)** ✅
+- [x] **Task A5.7: Visual Component 6 & 7 — Regional Matrix & Hadoop Architecture (`outputs/visuals/06_regional_risk_matrix.png`, `07_hadoop_architecture_infographic.png`)** ✅
+- [x] **Task A5.8: High-DPI Visuals Gallery Viewer (`outputs/visuals_gallery.html`)** ✅
 
 ### Phase 6: BDA Poster Assets & Academic Report Production
 - [ ] **Task A6.1: Architecture & Dataflow Diagram (Vector/High-Res)**

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Global Seismic Pipeline | High-Quality Visuals Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --surface: #111827;
+      --border: #1f293d;
+      --accent: #00f0ff;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --green: #10b981;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 40px 24px;
+      line-height: 1.6;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    h1 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.lead { font-size: 18px; color: var(--muted); max-width: 900px; }
+    
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .stat-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .stat-val { font-size: 32px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-top: 4px; }
+    
+    .visual-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 48px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .visual-header {
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .visual-title { font-size: 20px; font-weight: 700; color: #ffffff; }
+    .visual-desc { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .visual-tag {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+    .visual-img-wrap {
+      background: #05080f;
+      padding: 16px;
+      text-align: center;
+    }
+    .visual-img-wrap img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: transform 0.2s ease;
+    }
+    .visual-footer {
+      padding: 16px 28px;
+      background: rgba(15, 23, 42, 0.4);
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+    }
+    .btn-download {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .btn-download:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Big Data Analytics Case Study</div>
+      <h1>Real-Time Global Seismic Pipeline: High-Quality Visuals</h1>
+      <p class="lead">Methodical implementation of live USGS streaming, partitioned HDFS storage, Apache Hive batch aggregations, Apache HBase sub-millisecond serving, and high-DPI scientific visuals.</p>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-title">Ingested Seismic Events</div>
+        <div class="stat-val">2,011</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">HDFS Storage Layout</div>
+        <div class="stat-val" style="color:#a855f7;">Hourly Partitioned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">HBase Query Latency</div>
+        <div class="stat-val" style="color:var(--green);">0.28 ms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-title">Hive vs HBase Speedup</div>
+        <div class="stat-val" style="color:var(--amber);">21,978×</div>
+      </div>
+    </div>
+
+    <!-- Visual 1 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">1. Real-Time Global Seismic Telemetry & Epicenters</div>
+          <div class="visual-desc">Global equirectangular projection mapping earthquake epicenters. Point diameter is exponentially scaled to radiated seismic energy; color represents hypocenter focal depth (shallow coral to deep mantle).</div>
+        </div>
+        <span class="visual-tag">300 DPI • 5400×3000px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/01_global_seismic_map.png" target="_blank">
+          <img src="visuals/01_global_seismic_map.png" alt="Global Seismic Map">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: HDFS Raw Landing & Hive Processed Layer</span>
+        <a class="btn-download" href="visuals/01_global_seismic_map.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 2 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">2. Temporal Seismic Drumbeat & Aftershock Swarms</div>
+          <div class="visual-desc">Continuous temporal scatter revealing energy clustering, aftershock sequences, and severity classification bands (Moderate M4.5, Major M6.0).</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4800×2100px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/02_seismic_drumbeat_strip.png" target="_blank">
+          <img src="visuals/02_seismic_drumbeat_strip.png" alt="Seismic Drumbeat Strip">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: Hive Time-Series Window Analytics</span>
+        <a class="btn-download" href="visuals/02_seismic_drumbeat_strip.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 3 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">3. Rolling Hourly Activity Frequency & Anomaly Spikes</div>
+          <div class="visual-desc">Hourly event count and radiated energy curves with dynamic +1.8σ threshold line, empirically proving streaming ingestion throughput.</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4800×2100px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/03_hourly_activity_spikes.png" target="_blank">
+          <img src="visuals/03_hourly_activity_spikes.png" alt="Hourly Activity Spikes">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: Real-Time USGS Ingestion Daemon</span>
+        <a class="btn-download" href="visuals/03_hourly_activity_spikes.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 4 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">4. Focal Depth vs. Magnitude Correlation</div>
+          <div class="visual-desc">Marginal distribution scatter plot showing hypocenter focal depth versus Richter magnitude, highlighting shallow crustal hazards vs deep subduction zone dissipations.</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4500×2700px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/04_depth_vs_magnitude_scatter.png" target="_blank">
+          <img src="visuals/04_depth_vs_magnitude_scatter.png" alt="Depth vs Magnitude Scatter">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: Hive/Pig Statistical Distribution Pipeline</span>
+        <a class="btn-download" href="visuals/04_depth_vs_magnitude_scatter.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 5 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">5. Empirical Latency Benchmark: Hive vs. HBase</div>
+          <div class="visual-desc">The definitive empirical proof justifying HBase in the Hadoop ecosystem: 6,255 ms (Hive distributed scan) vs 0.28 ms (HBase reverse-timestamp prefix seek), a 21,978× speedup.</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4200×2400px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/05_hive_vs_hbase_latency.png" target="_blank">
+          <img src="visuals/05_hive_vs_hbase_latency.png" alt="Hive vs HBase Latency">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: Benchmark Module (benchmark/latency_comparison.py)</span>
+        <a class="btn-download" href="visuals/05_hive_vs_hbase_latency.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 6 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">6. Regional Seismic Activity & Hazard Scorecard</div>
+          <div class="visual-desc">Dual-panel comparative breakdown showing total event counts and peak Richter magnitude across top seismic zones (California, Alaska, Hawaii, Japan, South Pacific).</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4800×2100px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/06_regional_risk_matrix.png" target="_blank">
+          <img src="visuals/06_regional_risk_matrix.png" alt="Regional Risk Matrix">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: Hive Regional Aggregations</span>
+        <a class="btn-download" href="visuals/06_regional_risk_matrix.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+    <!-- Visual 7 -->
+    <div class="visual-section">
+      <div class="visual-header">
+        <div>
+          <div class="visual-title">7. Hadoop Ecosystem Architecture Infographic</div>
+          <div class="visual-desc">Clean, publication-grade architectural mapping showing data ingestion, HDFS raw/processed layers, YARN resource management, Hive/Pig compute, HBase serving, and ZooKeeper coordination.</div>
+        </div>
+        <span class="visual-tag">300 DPI • 4800×2700px</span>
+      </div>
+      <div class="visual-img-wrap">
+        <a href="visuals/07_hadoop_architecture_infographic.png" target="_blank">
+          <img src="visuals/07_hadoop_architecture_infographic.png" alt="Architecture Infographic">
+        </a>
+      </div>
+      <div class="visual-footer">
+        <span>Component: System Architecture Blueprint</span>
+        <a class="btn-download" href="visuals/07_hadoop_architecture_infographic.png" download>Download Full-Res PNG ↗</a>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
