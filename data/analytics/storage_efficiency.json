@@ -1,0 +1,15 @@
+{
+  "raw_json_bytes": 31005612,
+  "raw_json_mb": 29.57,
+  "parquet_snappy_bytes": 1072186,
+  "parquet_snappy_mb": 1.02,
+  "orc_snappy_bytes": 975689,
+  "orc_snappy_mb": 0.93,
+  "csv_bytes": 2819334,
+  "csv_mb": 2.69,
+  "parquet_savings_percent": 96.5,
+  "orc_savings_percent": 96.9,
+  "json_scan_throughput_mb_s": 42.5,
+  "parquet_scan_throughput_mb_s": 385.0,
+  "orc_scan_throughput_mb_s": 460.0
+}

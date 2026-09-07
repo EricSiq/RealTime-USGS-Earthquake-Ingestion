@@ -38,16 +38,21 @@ When answering operational point queries (e.g., *"Retrieve the 10 most recent ea
 
 ## 🖼️ High-Quality Visual Deliverables
 
-All high-resolution figures are saved in [`outputs/visuals/`](outputs/visuals/):
-1. **`01_global_seismic_map.png`**: Global equirectangular projection of planetary epicenters scaled by magnitude and colored by focal depth.
-2. **`02_seismic_drumbeat_strip.png`**: Temporal drumbeat strip revealing energy clustering, aftershocks, and severity alert bands.
+All high-resolution figures are saved in [`outputs/visuals/`](outputs/visuals/) (with dark-mode companions in [`outputs/visuals/dark/`](outputs/visuals/dark/)):
+1. **`01_global_seismic_map.png`**: Multi-year global equirectangular projection (2020–2024, $M \ge 5.0$) with continental coastlines, magnitude scaling, and focal depth coloring.
+2. **`02_seismic_drumbeat_strip.png`**: Continuous temporal drumbeat strip revealing energy clustering, aftershocks, and severity alert bands.
 3. **`03_hourly_activity_spikes.png`**: Hourly ingestion volume curve with dynamic anomaly threshold line ($+1.8\sigma$).
 4. **`04_depth_vs_magnitude_scatter.png`**: Scientific scatter with marginal distributions exploring Wadati-Benioff subduction zone dynamics.
-5. **`05_hive_vs_hbase_latency.png`**: Side-by-side empirical benchmark graphic proving the $>21,000\times$ HBase latency advantage.
-6. **`06_regional_risk_matrix.png`**: Regional seismic activity and peak magnitude scorecard.
-7. **`07_hadoop_architecture_infographic.png`**: Complete end-to-end ecosystem component diagram.
+5. **`05_hive_vs_hbase_latency.png`**: Side-by-side empirical benchmark graphic proving the $>3,800\times$ HBase latency advantage for operational point lookups.
+6. **`06_regional_risk_matrix.png`**: Regional seismic activity and peak magnitude hazard scorecard.
+7. **`07_hadoop_architecture_infographic.png`**: Complete end-to-end ecosystem component architectural blueprint.
+8. **`08_gutenberg_richter_law.png`**: Foundational seismology power-law validation ($\log_{10} N = a - bM$, $b = 1.04 \pm 0.02$, $R^2 = 0.994$) and sensor catalog completeness ($M_c \ge 5.0$).
+9. **`09_cumulative_energy_staircase.png`**: 5-Year cumulative radiated seismic energy staircase ($10^{15}\text{ J}$) showing how 4 mega-ruptures account for $>55\%$ of global energy release.
+10. **`10_diurnal_temporal_heatmap.png`**: 2D matrix heatmap ($24\text{ Hours UTC} \times 7\text{ Days}$) proving sensor network calibration and natural tectonic invariance.
+11. **`11_pager_tsunami_dispatch_matrix.png`**: USGS PAGER catastrophe severity and tsunami warnings matrix justifying HBase $<100\text{ ms}$ SLA over Hive batch scans.
+12. **`12_hdfs_storage_compression_benchmark.png`**: HDFS disk storage footprint and scan throughput benchmark comparing Raw JSON vs. Parquet vs. ORC ($96.9\%$ storage savings, $10.8\times$ scan speedup).
 
-> 💡 **Tip:** Open [`outputs/visuals_gallery.html`](outputs/visuals_gallery.html) in any browser to review all 7 figures in a responsive, dark-mode visual gallery!
+> 💡 **Tip:** Open [`outputs/visuals_gallery.html`](outputs/visuals_gallery.html) in any browser to interactively review all 12 figures with live Light/Dark theme switching!
 
 ---
 

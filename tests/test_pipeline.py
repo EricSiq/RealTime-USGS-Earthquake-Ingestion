@@ -227,7 +227,12 @@ class TestVisuals:
         "04_depth_vs_magnitude_scatter.png",
         "05_hive_vs_hbase_latency.png",
         "06_regional_risk_matrix.png",
-        "07_hadoop_architecture_infographic.png"
+        "07_hadoop_architecture_infographic.png",
+        "08_gutenberg_richter_law.png",
+        "09_cumulative_energy_staircase.png",
+        "10_diurnal_temporal_heatmap.png",
+        "11_pager_tsunami_dispatch_matrix.png",
+        "12_hdfs_storage_compression_benchmark.png"
     ]
 
     def test_light_mode_visuals_exist_and_non_empty(self):
