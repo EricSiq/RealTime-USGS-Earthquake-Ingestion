@@ -22,7 +22,24 @@ When answering operational point queries (e.g., *"Retrieve the 10 most recent ea
 
 ---
 
-## 📐 Architecture & Ecosystem Component Breakdown
+## 📐 Architecture & Ecosystem Pipeline Workflow
+
+![Real-Time USGS Earthquake Analytics Using the Hadoop Ecosystem](docs/hadoop_ecosystem_pipeline_workflow.png)
+
+### End-to-End Data Lifecycle & Component Workflow
+1. **USGS GeoJSON Feed:** Continuous real-time global seismic telemetry polling (`all_hour.geojson` / `all_day.geojson`).
+2. **Python Ingestion Service:** Handles automated polling, strict schema validation, de-duplication cache, and temporal micro-batching.
+3. **HDFS Raw Zone:** Immutable landing zone partitioned temporally (`/raw/earthquakes/YYYY=.../MM=.../DD=.../HH=.../`) to prevent directory bloat and resolve the small-file problem.
+4. **Hive + YARN & Pig + YARN (Distributed Compute):**
+   - **Hive + YARN:** Schema-on-read querying via `JsonSerDe`, large-scale analytical rollups, and conversion to columnar Snappy ORC format.
+   - **Pig + YARN:** Procedural ETL pipeline unnesting deeply nested GeoJSON coordinates, timestamps, and properties into clean relational tuples.
+5. **HDFS Processed Zone:** Highly optimized, partitioned columnar Parquet/ORC tables achieving a **96.9% disk storage reduction** over raw JSON.
+6. **HBase Serving Layer & ZooKeeper:**
+   - **HBase:** Low-latency NoSQL serving using composite reverse-timestamp row keys (`<REGION>#<MAX_LONG - epoch_millis>`) enabling sub-millisecond point seeks ($1.63\text{ ms}$).
+   - **ZooKeeper:** Cluster quorum coordination, leader election, and RegionServer assignment.
+7. **Visual Analytics & Low-Latency Operational Lookups:**
+   - **Streamlit + Plotly WebGL Dashboard:** Real-time geospatial mapping, seismic drumbeats, and live query consoles.
+   - **Operational Dispatch Consoles:** Immediate sub-second alerts for tsunami warnings and high-severity PAGER events.
 
 | Component | Role | Case Study Responsibility |
 | :--- | :--- | :--- |

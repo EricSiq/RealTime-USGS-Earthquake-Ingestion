@@ -3,6 +3,8 @@
 **Case Study:** USGS Earthquake Ingestion & Multi-Tier Hadoop Analytics  
 **Document:** Technical Schemas, DDLs, and Ingestion Contracts  
 
+![Real-Time USGS Earthquake Analytics Using the Hadoop Ecosystem](docs/hadoop_ecosystem_pipeline_workflow.png)
+
 ---
 
 ## 1. USGS GeoJSON Input Specification
