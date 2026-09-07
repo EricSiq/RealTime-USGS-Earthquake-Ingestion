@@ -122,9 +122,9 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
     ax = fig.add_subplot(111, facecolor=theme["ocean_fill"])
 
     # Dedicated header zone with generous spacing
-    fig.text(0.05, 0.955, "REAL-TIME GLOBAL SEISMIC TELEMETRY & TECTONIC EPICENTERS", 
+    fig.text(0.05, 0.955, "MULTI-YEAR GLOBAL SEISMIC TELEMETRY & MAJOR TREMORS (2020 – 2024)", 
              color=theme["text_primary"], fontsize=18, fontweight="bold")
-    fig.text(0.05, 0.925, f"Total Events Ingested: {len(df):,}  •  Max Magnitude: M{df['magnitude'].max():.1f}  •  USGS Live Feed Ingested via HDFS Data Lake", 
+    fig.text(0.05, 0.925, f"Planetary Ingestion Corpus: {len(df):,} Events Ingested  •  Max Magnitude: M{df['magnitude'].max():.1f}  •  5-Year Multi-Year Tectonic Ingestion via HDFS Data Lake", 
              color=theme["text_muted"], fontsize=11)
 
     # World continent & coastline outlines
@@ -144,30 +144,43 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
     ax.set_xlim(-180, 180)
     ax.set_ylim(-70, 85)
 
-    sizes = np.clip(14.0 * np.exp(0.55 * (df["magnitude"] - 2.0)), 12, 450)
+    df_major = df[df["magnitude"] >= 5.0].copy()
+    if df_major.empty:
+        df_major = df.copy()
+
+    sizes = np.clip(12.0 + 8.0 * (df_major["magnitude"] - 4.8)**1.6, 12, 220)
 
     # Plot earthquakes
     scatter = ax.scatter(
-        df["longitude"],
-        df["latitude"],
+        df_major["longitude"],
+        df_major["latitude"],
         s=sizes,
-        c=df["depth_km"],
+        c=df_major["depth_km"],
         cmap="turbo_r",
-        alpha=0.85,
+        alpha=0.82,
         edgecolors=theme["point_edge"],
-        linewidths=0.55,
+        linewidths=0.45,
         zorder=4
     )
 
-    # Highlight major events (M >= 5.0)
-    major_events = df[df["magnitude"] >= 5.0]
-    for _, row in major_events.iterrows():
-        ax.scatter(row["longitude"], row["latitude"], s=sizes.loc[_]*1.35, facecolors='none', edgecolors="#dc2626", linewidths=2.0, zorder=5)
+    # Highlight and annotate top 6 global mega-thrust landmark events across 2020-2024
+    top_mega = df_major.sort_values("magnitude", ascending=False).drop_duplicates(subset=["place"]).head(6)
+    offsets = [
+        (4, 5),     # 1
+        (-14, -7),  # 2
+        (5, 4),     # 3
+        (-15, 5),   # 4
+        (5, -6),    # 5
+        (5, 4)      # 6
+    ]
+    for idx, (_, row) in enumerate(top_mega.iterrows()):
+        ax.scatter(row["longitude"], row["latitude"], s=260, facecolors='none', edgecolors="#dc2626", linewidths=2.2, zorder=5)
         place_clean = row['place'].split(',')[-1].strip()
+        ox, oy = offsets[idx % len(offsets)]
         ax.annotate(
             f"M{row['magnitude']:.1f} • {place_clean}",
             xy=(row["longitude"], row["latitude"]),
-            xytext=(row["longitude"] + 3.5, row["latitude"] + 3.5),
+            xytext=(row["longitude"] + ox, row["latitude"] + oy),
             color=theme["text_primary"],
             fontsize=8.5,
             fontweight="bold",
@@ -198,76 +211,100 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 2: Seismic Drumbeat Strip Chart (July – October Window, Evenly Spaced)
+# VISUAL 2: Seismic Drumbeat Strip Chart (2020 – 2024 Multi-Year Window)
 # -----------------------------------------------------------------------------
 def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict):
-    fig, ax = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
+    fig, ax = plt.subplots(figsize=(16, 7.8), dpi=300, facecolor=theme["bg"])
     ax.set_facecolor(theme["surface"])
 
     # Dedicated header zone with ample breathing room
-    fig.text(0.06, 0.945, "TEMPORAL SEISMIC DRUMBEAT: JULY TO OCTOBER MONITORING WINDOW", 
+    fig.text(0.06, 0.945, "MULTI-YEAR GLOBAL SEISMIC DRUMBEAT: 2020 TO 2024 MONITORING WINDOW", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.06, 0.908, "Evenly-spaced timeline showing distinct seismic clustering and energy dissipation across July, August, September, and October", 
+    fig.text(0.06, 0.908, "5-Year continuous seismic monitoring timeline (M ≥ 5.0) showing planetary tremor distribution and focal depths", 
              color=theme["text_muted"], fontsize=10.5)
 
     df_sorted = df.sort_values("dt_utc").copy()
 
-    # Filter specifically for the July 1 to October 31 range
-    df_range = df_sorted[(df_sorted["dt_utc"] >= "2024-07-01") & (df_sorted["dt_utc"] <= "2024-10-31 23:59:59")]
+    # Filter for 2020-01-01 to 2024-12-31 range (M >= 5.0)
+    df_range = df_sorted[(df_sorted["dt_utc"] >= "2020-01-01") & (df_sorted["dt_utc"] <= "2024-12-31 23:59:59") & (df_sorted["magnitude"] >= 5.0)]
     if df_range.empty:
-        df_range = df_sorted
+        df_range = df_sorted[df_sorted["magnitude"] >= 5.0]
 
-    # Stratified display: notable events (M >= 3.8) are prominent, M < 3.8 are sampled background
-    # This guarantees even spacing across the 4-month timeline without crowding
-    notable = df_range[df_range["magnitude"] >= 3.8]
-    micro = df_range[df_range["magnitude"] < 3.8]
-    if len(micro) > 250:
-        micro = micro.sample(n=250, random_state=42).sort_values("dt_utc")
+    # Stratified display to guarantee clear spacing without dot crowding
+    major = df_range[df_range["magnitude"] >= 6.2]
+    moderate = df_range[df_range["magnitude"] < 6.2]
+    
+    # Sample moderate tremors evenly if dense (1,200 points across 5 years) to ensure rhythmic, uncluttered drumbeat
+    if len(moderate) > 1200:
+        moderate = moderate.sample(n=1200, random_state=42).sort_values("dt_utc")
 
-    # Subtle background micro-dots
-    if not micro.empty:
+    # Moderate tremors
+    if not moderate.empty:
         ax.scatter(
-            micro["dt_utc"],
-            micro["magnitude"],
-            color=theme["text_dim"],
-            s=8,
-            alpha=0.35,
+            moderate["dt_utc"],
+            moderate["magnitude"],
+            c=moderate["depth_km"],
+            cmap="turbo_r",
+            s=18,
+            alpha=0.55,
             edgecolors="none",
-            label="Background tremors (M < 3.8)",
+            label="Moderate tremors (5.0 ≤ M < 6.2)",
             zorder=2
         )
 
-    # Notable earthquakes: cleanly proportioned sizes and high-contrast depth colors
-    sizes = np.clip(22.0 + 14.0 * (notable["magnitude"] - 3.8)**1.3, 20, 130)
-
+    # Major and Mega earthquakes
+    sizes_major = np.clip(35.0 + 25.0 * (major["magnitude"] - 6.2)**1.4, 35, 180)
     scatter = ax.scatter(
-        notable["dt_utc"],
-        notable["magnitude"],
-        c=notable["depth_km"],
+        major["dt_utc"],
+        major["magnitude"],
+        c=major["depth_km"],
         cmap="turbo_r",
-        s=sizes,
-        alpha=0.85,
+        s=sizes_major,
+        alpha=0.90,
         edgecolors=theme["point_edge"],
-        linewidths=0.5,
-        label="Notable seismic events (M ≥ 3.8)",
+        linewidths=0.65,
+        label="Major seismic ruptures (M ≥ 6.2)",
         zorder=4
     )
 
+    # Annotate landmark events directly on the drumbeat timeline
+    landmarks = [
+        ("2021-07-29", 8.2, "Alaska M8.2"),
+        ("2023-02-06", 7.8, "Turkey M7.8"),
+        ("2024-01-01", 7.6, "Japan M7.6"),
+        ("2024-04-03", 7.4, "Taiwan M7.4")
+    ]
+    for date_str, mag_val, label_txt in landmarks:
+        ts = pd.Timestamp(date_str, tz="UTC")
+        ax.annotate(
+            label_txt,
+            xy=(ts, mag_val),
+            xytext=(ts, mag_val + 0.35),
+            color=theme["text_primary"],
+            fontsize=8.5,
+            fontweight="bold",
+            ha="center",
+            bbox=dict(boxstyle="round,pad=0.25", facecolor=theme["surface"], edgecolor="#dc2626", lw=1.1),
+            arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.2),
+            zorder=6
+        )
+
     # Shaded alert bands
-    ax.axhspan(2.5, 4.5, color=theme["band_1"], alpha=0.35, zorder=1)
-    ax.axhspan(4.5, 6.0, color=theme["band_2"], alpha=0.45, zorder=1)
-    ax.axhspan(6.0, 9.0, color=theme["band_3"], alpha=0.55, zorder=1)
+    ax.axhspan(5.0, 6.0, color=theme["band_1"], alpha=0.35, zorder=1)
+    ax.axhspan(6.0, 7.0, color=theme["band_2"], alpha=0.45, zorder=1)
+    ax.axhspan(7.0, 9.0, color=theme["band_3"], alpha=0.55, zorder=1)
 
-    ax.axhline(4.5, color="#d97706", linestyle="--", linewidth=1.3, alpha=0.9, label="Moderate Alert (M 4.5)")
-    ax.axhline(6.0, color="#dc2626", linestyle="--", linewidth=1.6, alpha=0.95, label="Major Alert (M 6.0)")
+    ax.axhline(6.0, color="#d97706", linestyle="--", linewidth=1.3, alpha=0.9, label="Strong Alert (M 6.0)")
+    ax.axhline(7.0, color="#dc2626", linestyle="--", linewidth=1.6, alpha=0.95, label="Major Alert (M 7.0)")
 
-    # Format Date Ticks on X-axis: Explicit July to October bounds
+    # Format Date Ticks on X-axis: 2020 to 2024 bounds
     import matplotlib.dates as mdates
-    ax.set_xlim(pd.Timestamp("2024-07-01"), pd.Timestamp("2024-10-31 23:59:59"))
-    ax.xaxis.set_major_locator(mdates.MonthLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%B\n%Y'))
-    ax.xaxis.set_minor_locator(mdates.DayLocator(bymonthday=[15]))
-    ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b 15'))
+    ax.set_xlim(pd.Timestamp("2020-01-01"), pd.Timestamp("2024-12-31 23:59:59"))
+    ax.set_ylim(4.8, 8.8)
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=[7]))
+    ax.xaxis.set_minor_formatter(mdates.DateFormatter("Jul '%y"))
 
     cbar = plt.colorbar(scatter, ax=ax, pad=0.02, shrink=0.82)
     cbar.set_label("Hypocenter Depth (km)", color=theme["text_primary"], fontsize=10, fontweight="bold")
@@ -275,10 +312,10 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     cbar.outline.set_edgecolor(theme["border"])
 
     ax.set_ylabel("Earthquake Magnitude (Mw)", color=theme["text_primary"], fontsize=11, labelpad=8)
-    ax.set_xlabel("4-Month Timeline (July – October)", color=theme["text_primary"], fontsize=11, labelpad=8)
+    ax.set_xlabel("5-Year Timeline (2020 – 2024)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax.tick_params(colors=theme["text_muted"], labelsize=9.5)
     ax.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
-    ax.legend(facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper right", framealpha=0.9)
+    ax.legend(facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="lower right", framealpha=0.9)
 
     for spine in ax.spines.values():
         spine.set_color(theme["border"])
@@ -291,43 +328,43 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 3: Activity Frequency & Spike Alert (July – October Window)
+# VISUAL 3: Activity Frequency & Spike Alert (2020 – 2024 Multi-Year Window)
 # -----------------------------------------------------------------------------
 def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
     df = load_data()
-    df_range = df[(df["dt_utc"] >= "2024-07-01") & (df["dt_utc"] <= "2024-10-31 23:59:59")].copy()
+    df_range = df[(df["dt_utc"] >= "2020-01-01") & (df["dt_utc"] <= "2024-12-31 23:59:59") & (df["magnitude"] >= 5.0)].copy()
     if df_range.empty:
-        df_range = df.copy()
+        df_range = df[df["magnitude"] >= 5.0].copy()
 
-    # Aggregate by Day across the 4-month span for clear peaks and valleys
-    df_range["day_window"] = df_range["dt_utc"].dt.floor("D")
-    daily_df = df_range.groupby("day_window").agg(
+    # Aggregate by Week across the 5-year span (260 weeks)
+    df_range["week_window"] = (df_range["dt_utc"] - pd.to_timedelta(df_range["dt_utc"].dt.dayofweek, unit="D")).dt.floor("D")
+    weekly_df = df_range.groupby("week_window").agg(
         total_events=("event_id", "count"),
         total_energy_joules=("seismic_energy_joules", "sum")
-    ).reset_index().sort_values("day_window")
+    ).reset_index().sort_values("week_window")
 
-    fig, ax1 = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
+    fig, ax1 = plt.subplots(figsize=(16, 7.8), dpi=300, facecolor=theme["bg"])
     ax1.set_facecolor(theme["surface"])
 
-    fig.text(0.06, 0.945, "SEISMIC ACTIVITY FREQUENCY & ANOMALY SPIKES: JULY TO OCTOBER", 
+    fig.text(0.06, 0.945, "MULTI-YEAR SEISMIC ACTIVITY FREQUENCY & ANOMALY SPIKES (2020 – 2024)", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.06, 0.908, "4-month continuous ingestion monitoring showing daily event volume and automated anomaly threshold spikes", 
+    fig.text(0.06, 0.908, "5-Year weekly major tremor rate (M ≥ 5.0) and radiated seismic energy showing global surge periods and automated anomaly thresholds", 
              color=theme["text_muted"], fontsize=10.5)
 
-    line1 = ax1.plot(daily_df["day_window"], daily_df["total_events"], color=theme["accent_primary"], linewidth=2.4, label="Daily Ingestion Count", zorder=3)
-    ax1.fill_between(daily_df["day_window"], daily_df["total_events"], color=theme["accent_primary"], alpha=0.18, zorder=2)
+    line1 = ax1.plot(weekly_df["week_window"], weekly_df["total_events"], color=theme["accent_primary"], linewidth=2.2, label="Weekly Ingestion Count (M ≥ 5.0)", zorder=3)
+    ax1.fill_between(weekly_df["week_window"], weekly_df["total_events"], color=theme["accent_primary"], alpha=0.18, zorder=2)
 
-    mean_val = daily_df["total_events"].mean()
-    std_val = daily_df["total_events"].std()
+    mean_val = weekly_df["total_events"].mean()
+    std_val = weekly_df["total_events"].std()
     spike_thresh = mean_val + 1.8 * std_val
 
-    ax1.axhline(mean_val, color=theme["text_muted"], linestyle=":", linewidth=1.3, label=f"Mean Rate ({mean_val:.1f} quakes/day)")
-    ax1.axhline(spike_thresh, color="#dc2626", linestyle="--", linewidth=1.6, label=f"Anomaly Spike Threshold (+1.8σ = {spike_thresh:.1f}/day)")
+    ax1.axhline(mean_val, color=theme["text_muted"], linestyle=":", linewidth=1.3, label=f"Mean Rate ({mean_val:.1f} quakes/week)")
+    ax1.axhline(spike_thresh, color="#dc2626", linestyle="--", linewidth=1.6, label=f"Anomaly Spike Threshold (+1.8σ = {spike_thresh:.1f}/week)")
 
-    # Secondary axis for daily energy
+    # Secondary axis for weekly energy
     ax2 = ax1.twinx()
     ax2.set_facecolor("none")
-    line2 = ax2.plot(daily_df["day_window"], daily_df["total_energy_joules"], color=theme["accent_secondary"], linewidth=1.8, linestyle="-.", alpha=0.88, label="Radiated Energy (Joules)", zorder=3)
+    line2 = ax2.plot(weekly_df["week_window"], weekly_df["total_energy_joules"], color=theme["accent_secondary"], linewidth=1.8, linestyle="-.", alpha=0.88, label="Radiated Energy (Joules)", zorder=3)
     ax2.set_yscale("log")
     ax2.set_ylabel("Radiated Energy (Joules, Log Scale)", color=theme["accent_secondary"], fontsize=11, labelpad=8)
     ax2.tick_params(colors=theme["accent_secondary"], labelsize=9)
@@ -335,19 +372,19 @@ def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
 
     # X-axis date limits and formatting
     import matplotlib.dates as mdates
-    ax1.set_xlim(pd.Timestamp("2024-07-01"), pd.Timestamp("2024-10-31 23:59:59"))
-    ax1.xaxis.set_major_locator(mdates.MonthLocator())
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%B\n%Y'))
-    ax1.xaxis.set_minor_locator(mdates.DayLocator(bymonthday=[15]))
-    ax1.xaxis.set_minor_formatter(mdates.DateFormatter('%b 15'))
+    ax1.set_xlim(pd.Timestamp("2020-01-01"), pd.Timestamp("2024-12-31 23:59:59"))
+    ax1.xaxis.set_major_locator(mdates.YearLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax1.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=[7]))
+    ax1.xaxis.set_minor_formatter(mdates.DateFormatter("Jul '%y"))
 
-    ax1.set_ylabel("Earthquakes Ingested per Day", color=theme["accent_primary"], fontsize=11, labelpad=8)
-    ax1.set_xlabel("4-Month Timeline (July – October)", color=theme["text_primary"], fontsize=11, labelpad=8)
+    ax1.set_ylabel("Earthquakes Ingested per Week (M ≥ 5.0)", color=theme["accent_primary"], fontsize=11, labelpad=8)
+    ax1.set_xlabel("5-Year Timeline (2020 – 2024)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax1.tick_params(colors=theme["text_muted"], labelsize=9.5)
     ax1.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
 
     lines = line1 + line2 + [plt.Line2D([0], [0], color="#dc2626", linestyle="--", lw=1.6)]
-    labels = ["Daily Event Count", "Radiated Energy (Joules)", f"Spike Alert Threshold ({spike_thresh:.1f}/day)"]
+    labels = ["Weekly Event Count", "Radiated Energy (Joules)", f"Spike Alert Threshold ({spike_thresh:.1f}/week)"]
     ax1.legend(lines, labels, facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper left")
 
     for spine in ax1.spines.values():
@@ -369,30 +406,34 @@ def generate_depth_vs_magnitude_scatter(df: pd.DataFrame, out_dir: Path, theme: 
 
     fig.text(0.08, 0.955, "FOCAL DEPTH VS. MAGNITUDE CORRELATION & WADATI-BENIOFF PATTERNS", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.08, 0.925, "Explores seismic dissipation across shallow crustal fault lines and deep subduction zone mantle slabs", 
+    fig.text(0.08, 0.925, "5-Year planetary record (2020–2024) exploring seismic dissipation across crustal fault lines and deep subduction zone mantle slabs", 
              color=theme["text_muted"], fontsize=10.5)
+
+    df_major = df[df["magnitude"] >= 5.0].copy()
+    if df_major.empty:
+        df_major = df.copy()
 
     ax_main = fig.add_subplot(gs[1:4, 0:3], facecolor=theme["surface"])
     ax_histx = fig.add_subplot(gs[0, 0:3], facecolor=theme["surface"], sharex=ax_main)
     ax_histy = fig.add_subplot(gs[1:4, 3], facecolor=theme["surface"], sharey=ax_main)
 
     ax_main.scatter(
-        df["magnitude"],
-        df["depth_km"],
-        c=df["depth_km"],
+        df_major["magnitude"],
+        df_major["depth_km"],
+        c=df_major["depth_km"],
         cmap="turbo_r",
-        s=np.clip(18.0 * (df["magnitude"]**1.3), 14, 320),
+        s=np.clip(18.0 * ((df_major["magnitude"] - 4.5)**1.4), 18, 260),
         alpha=0.78,
         edgecolors=theme["point_edge"],
-        linewidths=0.5
+        linewidths=0.45
     )
-    ax_main.set_ylim(df["depth_km"].max() * 1.05, -5)
+    ax_main.set_ylim(df_major["depth_km"].max() * 1.05, -5)
 
     ax_main.axhline(35, color="#dc2626", linestyle="--", linewidth=1.3, alpha=0.8, label="Crust-Mantle Boundary (35 km)")
     ax_main.axhline(150, color="#0284c7", linestyle="--", linewidth=1.3, alpha=0.8, label="Transition Zone (150 km)")
 
-    ax_histx.hist(df["magnitude"], bins=40, color="#0284c7", edgecolor=theme["surface"], alpha=0.85)
-    ax_histy.hist(df["depth_km"], bins=40, orientation="horizontal", color="#dc2626", edgecolor=theme["surface"], alpha=0.85)
+    ax_histx.hist(df_major["magnitude"], bins=35, color="#0284c7", edgecolor=theme["surface"], alpha=0.85)
+    ax_histy.hist(df_major["depth_km"], bins=35, orientation="horizontal", color="#dc2626", edgecolor=theme["surface"], alpha=0.85)
 
     plt.setp(ax_histx.get_xticklabels(), visible=False)
     plt.setp(ax_histy.get_yticklabels(), visible=False)
@@ -476,7 +517,8 @@ def generate_regional_risk_matrix(out_dir: Path, theme: dict):
     if not reg_file.exists():
         return
 
-    rdf = pd.read_csv(reg_file).head(8)
+    rdf = pd.read_csv(reg_file)
+    rdf = rdf[rdf["region"] != "GLOBAL_OTHER"].head(8)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
 
     fig.text(0.06, 0.945, "REGIONAL SEISMIC ACTIVITY & HAZARD SCORECARD", 

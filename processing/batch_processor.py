@@ -41,18 +41,24 @@ def classify_region(place: str) -> str:
         return "PHILIPPINES"
     if "MEXICO" in p:
         return "MEXICO"
-    if "NEW ZEALAND" in p:
+    if "NEW ZEALAND" in p or "KERMADEC" in p:
         return "NEW_ZEALAND"
     if "PUERTO RICO" in p or re.search(r"\bPR\b", p):
         return "PUERTO_RICO"
-    if "TURKEY" in p or "TÜRKIYE" in p:
+    if "TURKEY" in p or "TÜRKIYE" in p or "KAHRAMANMARAS" in p or "PAZARCIK" in p:
         return "TURKEY"
-    if "FIJI" in p or "TONGA" in p or "VANUATU" in p:
+    if "FIJI" in p or "TONGA" in p or "VANUATU" in p or "LOYALTY" in p or "PAPUA" in p or "SOLOMON" in p:
         return "SOUTH_PACIFIC"
+    if "TAIWAN" in p:
+        return "TAIWAN"
     if "ICELAND" in p:
         return "ICELAND"
     if "GREECE" in p or "ITALY" in p:
         return "MEDITERRANEAN"
+    if "SANDWICH" in p:
+        return "SOUTH_ATLANTIC"
+    if "JAMAICA" in p or "CARIBBEAN" in p or "HAITI" in p:
+        return "CARIBBEAN"
     return "GLOBAL_OTHER"
 
 def calculate_seismic_energy(mag: float) -> float:
@@ -145,7 +151,7 @@ def process_raw_hdfs_batches():
     # -------------------------------------------------------------
     # Compute Hive-Equivalent Analytical Rollups
     # -------------------------------------------------------------
-    # 1. Hourly Activity Aggregation
+    # 1. Hourly, Daily & Monthly Activity Aggregation
     df["dt_utc"] = pd.to_datetime(df["epoch_millis"], unit="ms", utc=True)
     df["hour_window"] = df["dt_utc"].dt.floor("h")
     hourly_df = df.groupby("hour_window").agg(
@@ -156,6 +162,26 @@ def process_raw_hdfs_batches():
     ).reset_index().sort_values("hour_window", ascending=True)
     hourly_file = ANALYTICS_DIR / "hourly_activity.csv"
     hourly_df.to_csv(hourly_file, index=False)
+
+    df["day_window"] = df["dt_utc"].dt.floor("D")
+    daily_df = df.groupby("day_window").agg(
+        total_events=("event_id", "count"),
+        avg_magnitude=("magnitude", "mean"),
+        max_magnitude=("magnitude", "max"),
+        total_energy_joules=("seismic_energy_joules", "sum")
+    ).reset_index().sort_values("day_window", ascending=True)
+    daily_file = ANALYTICS_DIR / "daily_activity.csv"
+    daily_df.to_csv(daily_file, index=False)
+
+    df["month_window"] = pd.to_datetime(df["dt_utc"].dt.strftime("%Y-%m-01"), utc=True)
+    monthly_df = df.groupby("month_window").agg(
+        total_events=("event_id", "count"),
+        avg_magnitude=("magnitude", "mean"),
+        max_magnitude=("magnitude", "max"),
+        total_energy_joules=("seismic_energy_joules", "sum")
+    ).reset_index().sort_values("month_window", ascending=True)
+    monthly_file = ANALYTICS_DIR / "monthly_activity.csv"
+    monthly_df.to_csv(monthly_file, index=False)
 
     # 2. Regional Risk Scorecard
     regional_df = df.groupby("region").agg(

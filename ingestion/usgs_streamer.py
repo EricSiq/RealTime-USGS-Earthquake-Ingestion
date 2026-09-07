@@ -19,6 +19,7 @@ USGS_ALL_HOUR = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_h
 USGS_ALL_DAY = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 USGS_ALL_WEEK = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
 USGS_JULY_OCT = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2024-07-01&endtime=2024-10-31&minmagnitude=3.0"
+USGS_2020_2024_MAJOR = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2020-01-01&endtime=2024-12-31&minmagnitude=5.0"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -43,8 +44,8 @@ class USGSStreamer:
 
     def _save_state(self):
         STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        # Keep recent 20,000 IDs to prevent state bloat
-        recent_ids = list(self.seen_ids)[-20000:]
+        # Keep recent 50,000 IDs to prevent state bloat while handling multi-year batches
+        recent_ids = list(self.seen_ids)[-50000:]
         with open(STATE_FILE, "w", encoding="utf-8") as f:
             json.dump({
                 "last_run": datetime.now(timezone.utc).isoformat(),
@@ -58,11 +59,12 @@ class USGSStreamer:
         last_err = None
         for attempt in range(1, retries + 1):
             try:
-                resp = requests.get(self.feed_url, headers=headers, timeout=15)
+                resp = requests.get(self.feed_url, headers=headers, timeout=45)
                 resp.raise_for_status()
                 return resp.json()
             except (requests.RequestException, Exception) as e:
                 last_err = e
+                print(f"  [Attempt {attempt}/{retries}] Network retry due to: {e}")
                 if attempt < retries:
                     time.sleep(backoff * attempt)
         raise last_err
@@ -123,12 +125,16 @@ class USGSStreamer:
 
 if __name__ == "__main__":
     feed = USGS_ALL_DAY
-    if len(sys.argv) > 1 and sys.argv[1] == "--week":
-        feed = USGS_ALL_WEEK
-    elif len(sys.argv) > 1 and sys.argv[1] == "--hour":
-        feed = USGS_ALL_HOUR
-    elif len(sys.argv) > 1 and sys.argv[1] == "--july-oct":
-        feed = USGS_JULY_OCT
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        if arg in ["--multi-year", "--2020-2024", "-m"]:
+            feed = USGS_2020_2024_MAJOR
+        elif arg == "--week":
+            feed = USGS_ALL_WEEK
+        elif arg == "--hour":
+            feed = USGS_ALL_HOUR
+        elif arg == "--july-oct":
+            feed = USGS_JULY_OCT
 
     streamer = USGSStreamer(feed_url=feed)
     new_cnt, total_cnt = streamer.run_once()
