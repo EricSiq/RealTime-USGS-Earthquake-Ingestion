@@ -18,6 +18,7 @@ from typing import Dict, Any, Tuple, List
 USGS_ALL_HOUR = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
 USGS_ALL_DAY = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 USGS_ALL_WEEK = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+USGS_JULY_OCT = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2024-07-01&endtime=2024-10-31&minmagnitude=3.0"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -51,12 +52,20 @@ class USGSStreamer:
                 "total_unique_seen": len(self.seen_ids)
             }, f, indent=2)
 
-    def fetch_feed(self) -> Dict[str, Any]:
+    def fetch_feed(self, retries: int = 3, backoff: float = 1.5) -> Dict[str, Any]:
         headers = {"User-Agent": "BDA-Hadoop-Seismic-Pipeline/1.0"}
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Connecting to USGS API: {self.feed_url}")
-        resp = requests.get(self.feed_url, headers=headers, timeout=15)
-        resp.raise_for_status()
-        return resp.json()
+        last_err = None
+        for attempt in range(1, retries + 1):
+            try:
+                resp = requests.get(self.feed_url, headers=headers, timeout=15)
+                resp.raise_for_status()
+                return resp.json()
+            except (requests.RequestException, Exception) as e:
+                last_err = e
+                if attempt < retries:
+                    time.sleep(backoff * attempt)
+        raise last_err
 
     def partition_and_land(self, payload: Dict[str, Any]) -> Tuple[int, int, List[Path]]:
         features = payload.get("features", [])
@@ -118,6 +127,8 @@ if __name__ == "__main__":
         feed = USGS_ALL_WEEK
     elif len(sys.argv) > 1 and sys.argv[1] == "--hour":
         feed = USGS_ALL_HOUR
+    elif len(sys.argv) > 1 and sys.argv[1] == "--july-oct":
+        feed = USGS_JULY_OCT
 
     streamer = USGSStreamer(feed_url=feed)
     new_cnt, total_cnt = streamer.run_once()

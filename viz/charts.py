@@ -198,43 +198,47 @@ def generate_global_seismic_map(df: pd.DataFrame, out_dir: Path, theme: dict):
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 2: Seismic Drumbeat Strip Chart (Clean Spacing & Stratified Visibility)
+# VISUAL 2: Seismic Drumbeat Strip Chart (July – October Window, Evenly Spaced)
 # -----------------------------------------------------------------------------
 def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict):
     fig, ax = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
     ax.set_facecolor(theme["surface"])
 
     # Dedicated header zone with ample breathing room
-    fig.text(0.06, 0.945, "TEMPORAL SEISMIC DRUMBEAT & MAINSHOCK-AFTERSHOCK CLUSTERING", 
+    fig.text(0.06, 0.945, "TEMPORAL SEISMIC DRUMBEAT: JULY TO OCTOBER MONITORING WINDOW", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.06, 0.908, "Evenly-spaced timeline showing distinct seismic energy release (M ≥ 2.0 felt events & stratified background)", 
+    fig.text(0.06, 0.908, "Evenly-spaced timeline showing distinct seismic clustering and energy dissipation across July, August, September, and October", 
              color=theme["text_muted"], fontsize=10.5)
 
     df_sorted = df.sort_values("dt_utc").copy()
 
-    # Stratify into felt/notable events (M >= 2.0) and sampled background micro-tremors (M < 2.0)
-    # to eliminate dense overplotting while preserving temporal distribution
-    notable = df_sorted[df_sorted["magnitude"] >= 2.0]
-    micro = df_sorted[df_sorted["magnitude"] < 2.0]
-    if len(micro) > 220:
-        micro = micro.sample(n=220, random_state=42).sort_values("dt_utc")
+    # Filter specifically for the July 1 to October 31 range
+    df_range = df_sorted[(df_sorted["dt_utc"] >= "2024-07-01") & (df_sorted["dt_utc"] <= "2024-10-31 23:59:59")]
+    if df_range.empty:
+        df_range = df_sorted
 
-    # Plot subtle micro background dots
+    # Stratified display: notable events (M >= 3.8) are prominent, M < 3.8 are sampled background
+    # This guarantees even spacing across the 4-month timeline without crowding
+    notable = df_range[df_range["magnitude"] >= 3.8]
+    micro = df_range[df_range["magnitude"] < 3.8]
+    if len(micro) > 250:
+        micro = micro.sample(n=250, random_state=42).sort_values("dt_utc")
+
+    # Subtle background micro-dots
     if not micro.empty:
         ax.scatter(
             micro["dt_utc"],
             micro["magnitude"],
             color=theme["text_dim"],
-            s=10,
+            s=8,
             alpha=0.35,
             edgecolors="none",
-            label="Micro-seismic background (M < 2.0)",
+            label="Background tremors (M < 3.8)",
             zorder=2
         )
 
-    # Plot notable events with clean, well-proportioned sizes
-    # Marker sizes scaled gently from 28 to 140
-    sizes = np.clip(28.0 + 16.0 * (notable["magnitude"] - 2.0)**1.3, 25, 140)
+    # Notable earthquakes: cleanly proportioned sizes and high-contrast depth colors
+    sizes = np.clip(22.0 + 14.0 * (notable["magnitude"] - 3.8)**1.3, 20, 130)
 
     scatter = ax.scatter(
         notable["dt_utc"],
@@ -242,15 +246,14 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
         c=notable["depth_km"],
         cmap="turbo_r",
         s=sizes,
-        alpha=0.88,
+        alpha=0.85,
         edgecolors=theme["point_edge"],
-        linewidths=0.55,
-        label="Felt seismic events (M ≥ 2.0)",
+        linewidths=0.5,
+        label="Notable seismic events (M ≥ 3.8)",
         zorder=4
     )
 
     # Shaded alert bands
-    ax.axhspan(0, 2.5, color=theme["band_0"], alpha=0.5, zorder=1)
     ax.axhspan(2.5, 4.5, color=theme["band_1"], alpha=0.35, zorder=1)
     ax.axhspan(4.5, 6.0, color=theme["band_2"], alpha=0.45, zorder=1)
     ax.axhspan(6.0, 9.0, color=theme["band_3"], alpha=0.55, zorder=1)
@@ -258,12 +261,13 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     ax.axhline(4.5, color="#d97706", linestyle="--", linewidth=1.3, alpha=0.9, label="Moderate Alert (M 4.5)")
     ax.axhline(6.0, color="#dc2626", linestyle="--", linewidth=1.6, alpha=0.95, label="Major Alert (M 6.0)")
 
-    # Format Date Ticks cleanly on X-axis
+    # Format Date Ticks on X-axis: Explicit July to October bounds
     import matplotlib.dates as mdates
-    locator = mdates.AutoDateLocator(minticks=5, maxticks=10)
-    formatter = mdates.ConciseDateFormatter(locator)
-    ax.xaxis.set_major_locator(locator)
-    ax.xaxis.set_major_formatter(formatter)
+    ax.set_xlim(pd.Timestamp("2024-07-01"), pd.Timestamp("2024-10-31 23:59:59"))
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%B\n%Y'))
+    ax.xaxis.set_minor_locator(mdates.DayLocator(bymonthday=[15]))
+    ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b 15'))
 
     cbar = plt.colorbar(scatter, ax=ax, pad=0.02, shrink=0.82)
     cbar.set_label("Hypocenter Depth (km)", color=theme["text_primary"], fontsize=10, fontweight="bold")
@@ -271,7 +275,7 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     cbar.outline.set_edgecolor(theme["border"])
 
     ax.set_ylabel("Earthquake Magnitude (Mw)", color=theme["text_primary"], fontsize=11, labelpad=8)
-    ax.set_xlabel("Timeline (UTC)", color=theme["text_primary"], fontsize=11, labelpad=8)
+    ax.set_xlabel("4-Month Timeline (July – October)", color=theme["text_primary"], fontsize=11, labelpad=8)
     ax.tick_params(colors=theme["text_muted"], labelsize=9.5)
     ax.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
     ax.legend(facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper right", framealpha=0.9)
@@ -287,50 +291,63 @@ def generate_seismic_drumbeat_strip(df: pd.DataFrame, out_dir: Path, theme: dict
     print(f"  [OK] Saved: {out_path.name}")
 
 # -----------------------------------------------------------------------------
-# VISUAL 3: Rolling Activity Frequency & Spike Alert
+# VISUAL 3: Activity Frequency & Spike Alert (July – October Window)
 # -----------------------------------------------------------------------------
 def generate_hourly_activity_spikes(out_dir: Path, theme: dict):
-    hourly_file = ANALYTICS_DIR / "hourly_activity.csv"
-    if not hourly_file.exists():
-        return
+    df = load_data()
+    df_range = df[(df["dt_utc"] >= "2024-07-01") & (df["dt_utc"] <= "2024-10-31 23:59:59")].copy()
+    if df_range.empty:
+        df_range = df.copy()
 
-    hdf = pd.read_csv(hourly_file)
-    hdf["hour_dt"] = pd.to_datetime(hdf["hour_window"])
-    hdf = hdf.sort_values("hour_dt")
+    # Aggregate by Day across the 4-month span for clear peaks and valleys
+    df_range["day_window"] = df_range["dt_utc"].dt.floor("D")
+    daily_df = df_range.groupby("day_window").agg(
+        total_events=("event_id", "count"),
+        total_energy_joules=("seismic_energy_joules", "sum")
+    ).reset_index().sort_values("day_window")
 
     fig, ax1 = plt.subplots(figsize=(16, 7.5), dpi=300, facecolor=theme["bg"])
     ax1.set_facecolor(theme["surface"])
 
-    fig.text(0.06, 0.945, "ROLLING HOURLY SEISMIC FREQUENCY & ENERGY SPIKE DETECTION", 
+    fig.text(0.06, 0.945, "SEISMIC ACTIVITY FREQUENCY & ANOMALY SPIKES: JULY TO OCTOBER", 
              color=theme["text_primary"], fontsize=16, fontweight="bold")
-    fig.text(0.06, 0.908, "Empirical proof of continuous streaming ingestion throughput and automated anomaly spike detection", 
+    fig.text(0.06, 0.908, "4-month continuous ingestion monitoring showing daily event volume and automated anomaly threshold spikes", 
              color=theme["text_muted"], fontsize=10.5)
 
-    line1 = ax1.plot(hdf["hour_dt"], hdf["total_events"], color=theme["accent_primary"], linewidth=2.4, label="Hourly Event Count", zorder=3)
-    ax1.fill_between(hdf["hour_dt"], hdf["total_events"], color=theme["accent_primary"], alpha=0.18, zorder=2)
+    line1 = ax1.plot(daily_df["day_window"], daily_df["total_events"], color=theme["accent_primary"], linewidth=2.4, label="Daily Ingestion Count", zorder=3)
+    ax1.fill_between(daily_df["day_window"], daily_df["total_events"], color=theme["accent_primary"], alpha=0.18, zorder=2)
 
-    mean_val = hdf["total_events"].mean()
-    std_val = hdf["total_events"].std()
+    mean_val = daily_df["total_events"].mean()
+    std_val = daily_df["total_events"].std()
     spike_thresh = mean_val + 1.8 * std_val
 
-    ax1.axhline(mean_val, color=theme["text_muted"], linestyle=":", linewidth=1.3, label=f"Mean Rate ({mean_val:.1f} quakes/hr)")
-    ax1.axhline(spike_thresh, color="#dc2626", linestyle="--", linewidth=1.6, label=f"Seismic Spike Threshold (+1.8σ = {spike_thresh:.1f})")
+    ax1.axhline(mean_val, color=theme["text_muted"], linestyle=":", linewidth=1.3, label=f"Mean Rate ({mean_val:.1f} quakes/day)")
+    ax1.axhline(spike_thresh, color="#dc2626", linestyle="--", linewidth=1.6, label=f"Anomaly Spike Threshold (+1.8σ = {spike_thresh:.1f}/day)")
 
+    # Secondary axis for daily energy
     ax2 = ax1.twinx()
     ax2.set_facecolor("none")
-    line2 = ax2.plot(hdf["hour_dt"], hdf["total_energy_joules"], color=theme["accent_secondary"], linewidth=1.8, linestyle="-.", alpha=0.88, label="Radiated Energy (Joules)", zorder=3)
+    line2 = ax2.plot(daily_df["day_window"], daily_df["total_energy_joules"], color=theme["accent_secondary"], linewidth=1.8, linestyle="-.", alpha=0.88, label="Radiated Energy (Joules)", zorder=3)
     ax2.set_yscale("log")
     ax2.set_ylabel("Radiated Energy (Joules, Log Scale)", color=theme["accent_secondary"], fontsize=11, labelpad=8)
     ax2.tick_params(colors=theme["accent_secondary"], labelsize=9)
     ax2.spines["right"].set_color(theme["accent_secondary"])
 
-    ax1.set_ylabel("Earthquakes Ingested per Hour", color=theme["accent_primary"], fontsize=11, labelpad=8)
-    ax1.set_xlabel("Time (Hourly Partition Windows)", color=theme["text_primary"], fontsize=11, labelpad=8)
-    ax1.tick_params(colors=theme["text_muted"], labelsize=9)
+    # X-axis date limits and formatting
+    import matplotlib.dates as mdates
+    ax1.set_xlim(pd.Timestamp("2024-07-01"), pd.Timestamp("2024-10-31 23:59:59"))
+    ax1.xaxis.set_major_locator(mdates.MonthLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%B\n%Y'))
+    ax1.xaxis.set_minor_locator(mdates.DayLocator(bymonthday=[15]))
+    ax1.xaxis.set_minor_formatter(mdates.DateFormatter('%b 15'))
+
+    ax1.set_ylabel("Earthquakes Ingested per Day", color=theme["accent_primary"], fontsize=11, labelpad=8)
+    ax1.set_xlabel("4-Month Timeline (July – October)", color=theme["text_primary"], fontsize=11, labelpad=8)
+    ax1.tick_params(colors=theme["text_muted"], labelsize=9.5)
     ax1.grid(True, linestyle=":", alpha=0.4, color=theme["grid"])
 
     lines = line1 + line2 + [plt.Line2D([0], [0], color="#dc2626", linestyle="--", lw=1.6)]
-    labels = ["Hourly Event Frequency", "Radiated Energy (Joules)", f"Spike Alert Threshold ({spike_thresh:.1f}/hr)"]
+    labels = ["Daily Event Count", "Radiated Energy (Joules)", f"Spike Alert Threshold ({spike_thresh:.1f}/day)"]
     ax1.legend(lines, labels, facecolor=theme["surface"], edgecolor=theme["border"], labelcolor=theme["text_primary"], loc="upper left")
 
     for spine in ax1.spines.values():

@@ -1,20 +1,20 @@
 {
-  "benchmark_date": "2026-09-07 10:10:04",
+  "benchmark_date": "2026-09-07 10:29:58",
   "target_region": "CALIFORNIA",
   "iterations": 50,
-  "speedup_factor": 24740.2,
+  "speedup_factor": 8202.6,
   "hive": {
-    "mean_ms": 6239.28,
-    "median_ms": 6239.25,
-    "p95_ms": 6243.92,
-    "p99_ms": 6251.19,
+    "mean_ms": 6236.24,
+    "median_ms": 6235.23,
+    "p95_ms": 6242.19,
+    "p99_ms": 6248.47,
     "query_type": "Full Distributed Block Scan + Shuffle Sort"
   },
   "hbase": {
-    "mean_ms": 0.25,
-    "median_ms": 0.25,
-    "p95_ms": 0.3,
-    "p99_ms": 0.33,
+    "mean_ms": 0.76,
+    "median_ms": 0.72,
+    "p95_ms": 1.0,
+    "p99_ms": 1.12,
     "query_type": "Prefix Seek on Indexed RowKey (region#reverse_ts)"
   }
 }
