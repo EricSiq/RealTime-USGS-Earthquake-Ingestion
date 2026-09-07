@@ -108,16 +108,41 @@ python hbase/loader.py
 python benchmark/latency_comparison.py
 ```
 
-### 5. Render All 300 DPI Figures & Launch Web Dashboard
+### 5. Launch Interactive Analytics Dashboard
 ```bash
-# Generate PNG figures
-python viz/charts.py
-
-# Launch interactive Streamlit dashboard
 streamlit run viz/app.py
 ```
+The dashboard will open automatically in your browser at `http://localhost:8501`.
 
-### 6. (Optional) Run Full Multi-Container Docker Cluster
+#### Key Dashboard Capabilities:
+- **🛰️ Live Telemetry & Geospatial:** WebGL-accelerated interactive world map, temporal seismic drumbeat strip, rolling hourly ingestion rate, and hypocenter focal depth stratification.
+- **⚡ HBase Serving & Benchmark Console:** Real-time prefix seek query interface executing live sub-millisecond lookups on composite row keys, plus on-demand Hive vs. HBase benchmark runner.
+- **🔬 Advanced Seismology & Rollups:** Gutenberg-Richter power-law semi-log regression ($b \approx 1.0$), cumulative radiated energy staircase ($E \propto 10^{1.5M}$), 24x7 diurnal temporal heatmap, and PAGER catastrophe severity matrix.
+- **📊 Publication Visuals Gallery (12 Figures):** Interactive visual browser for all 12 publication-grade 300 DPI figures with live Light/Dark theme switching and instant PNG downloads.
+- **🏛️ Hadoop Architecture & Blueprint:** Complete ecosystem workflow diagram, 6-stage lifecycle narrative, and inspectable Hive SQL, Pig Latin, HBase DDL, and Docker Compose scripts.
+- **⚡ Pipeline Action Center (Sidebar):** Trigger live USGS ingestion, re-compute batch Hive/Pig rollups, or re-sync the HBase LSM store directly from UI buttons without opening a terminal!
+
+---
+
+### 6. Run Comprehensive Pipeline Test Suite
+To verify all 7 pipeline stages, run the automated test suite:
+```bash
+pytest tests/test_pipeline.py -v
+```
+All 18 tests cover:
+1. USGS endpoint connectivity & feature schema validation
+2. Ingestion de-duplication idempotency
+3. HDFS hierarchical temporal partition structure (`YYYY=.../MM=.../DD=.../HH=.../`)
+4. Regional classification & Gutenberg-Richter energy calculations
+5. Processed columnar Parquet schema & Hive analytical rollups
+6. HBase composite reverse-timestamp ordering & $O(1)$ prefix seek
+7. Empirical latency benchmark speedup verification
+8. 300 DPI visual assets (Light & Dark) and HTML gallery
+9. Streamlit dashboard dataset integrity and module compilation
+
+---
+
+### 7. (Optional) Run Full Multi-Container Docker Cluster
 If running Docker Desktop with at least 6-8 GB RAM allocated:
 ```bash
 docker compose up -d

@@ -13,6 +13,7 @@ __pycache__/
 data/hdfs/raw/**/*.jsonl
 data/hdfs/
 data/hbase_kv_store.json
+data/ingestion_state.json
 *.log
 
 # IDE & OS

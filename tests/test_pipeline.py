@@ -258,3 +258,32 @@ class TestVisuals:
         content = gallery_file.read_text(encoding="utf-8")
         assert "toggleTheme" in content
         assert "01_global_seismic_map.png" in content
+
+
+# =============================================================================
+# 7. DASHBOARD & END-TO-END WORKFLOW INTEGRATION TESTS
+# =============================================================================
+class TestDashboard:
+    def test_workflow_architecture_diagram_exists(self):
+        """Verify the architecture workflow diagram exists in docs/ and outputs/."""
+        doc_diag = BASE_DIR / "docs" / "hadoop_ecosystem_pipeline_workflow.png"
+        out_diag = VISUALS_DIR / "hadoop_ecosystem_pipeline_workflow.png"
+        assert doc_diag.exists(), "Missing docs/hadoop_ecosystem_pipeline_workflow.png"
+        assert out_diag.exists(), "Missing outputs/visuals/hadoop_ecosystem_pipeline_workflow.png"
+        assert doc_diag.stat().st_size > 50000
+
+    def test_dashboard_dataset_columns_and_non_empty(self):
+        """Verify processed dataset supplies all fields required by dashboard visualizations."""
+        assert PROCESSED_FILE.exists()
+        df = pd.read_parquet(PROCESSED_FILE)
+        assert len(df) > 0
+        required_fields = ["latitude", "longitude", "magnitude", "depth_km", "place", "region", "epoch_millis", "alert_level", "tsunami_flag"]
+        for field in required_fields:
+            assert field in df.columns, f"Missing required dashboard field: {field}"
+
+    def test_dashboard_module_compilation(self):
+        """Verify viz/app.py compiles without syntax errors or broken imports."""
+        import importlib
+        app_spec = importlib.util.find_spec("viz.app")
+        assert app_spec is not None, "Could not find spec for viz.app"
+

@@ -96,10 +96,10 @@ def run_benchmark():
     print(f"  p99 Latency  : {hive_p99:9.2f} ms")
 
     print(f"\n[Apache HBase (OLTP Reverse-Key Seek)]")
-    print(f"  Mean Latency : {hbase_mean:9.2f} ms")
-    print(f"  p50 (Median) : {hbase_p50:9.2f} ms")
-    print(f"  p95 Latency  : {hbase_p95:9.2f} ms")
-    print(f"  p99 Latency  : {hbase_p99:9.2f} ms")
+    print(f"  Mean Latency : {hbase_mean:9.4f} ms")
+    print(f"  p50 (Median) : {hbase_p50:9.4f} ms")
+    print(f"  p95 Latency  : {hbase_p95:9.4f} ms")
+    print(f"  p99 Latency  : {hbase_p99:9.4f} ms")
 
     print("-" * 65)
     print(f"EMPIRICAL SPEEDUP: Apache HBase is {speedup:,.1f}x FASTER than Apache Hive")
@@ -119,10 +119,10 @@ def run_benchmark():
             "query_type": "Full Distributed Block Scan + Shuffle Sort"
         },
         "hbase": {
-            "mean_ms": round(hbase_mean, 2),
-            "median_ms": round(hbase_p50, 2),
-            "p95_ms": round(hbase_p95, 2),
-            "p99_ms": round(hbase_p99, 2),
+            "mean_ms": round(hbase_mean, 4),
+            "median_ms": round(hbase_p50, 4),
+            "p95_ms": round(hbase_p95, 4),
+            "p99_ms": round(hbase_p99, 4),
             "query_type": "Prefix Seek on Indexed RowKey (region#reverse_ts)"
         }
     }

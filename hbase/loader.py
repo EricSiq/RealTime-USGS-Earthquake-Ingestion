@@ -21,9 +21,17 @@ HBASE_STORE_FILE = BASE_DIR / "data" / "hbase_kv_store.json"
 MAX_LONG = 9223372036854775807
 
 class HBaseSeismicStore:
+    _shared_kv_store: Dict[str, Dict[str, Any]] = None
+    _shared_sorted_keys: List[str] = None
+
     def __init__(self):
-        self.kv_store: Dict[str, Dict[str, Any]] = {}
-        self._load_local_store()
+        if HBaseSeismicStore._shared_kv_store is not None:
+            self.kv_store = HBaseSeismicStore._shared_kv_store
+            self.sorted_keys = HBaseSeismicStore._shared_sorted_keys
+        else:
+            self.kv_store: Dict[str, Dict[str, Any]] = {}
+            self.sorted_keys: List[str] = []
+            self._load_local_store()
 
     def _generate_row_key(self, region: str, epoch_millis: int) -> str:
         # Pad with 19 zeros so lexicographical sorting matches numerical sorting exactly
@@ -74,17 +82,32 @@ class HBaseSeismicStore:
 
     def scan_latest_by_region(self, region: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Emulates an HBase Prefix Scan:
+        Emulates an HBase Prefix Scan with sub-millisecond seek:
         STARTROW = '<region>#'
         Because row keys contain (MAX_LONG - ts), lexicographical order is naturally DESCENDING by time!
+        Uses binary search (bisect) over sorted keys for instantaneous O(log N) point lookup.
         """
         prefix = f"{region}#"
-        # Keys starting with prefix are already sorted descending by timestamp
-        matching_keys = [k for k in sorted(self.kv_store.keys()) if k.startswith(prefix)]
-        results = [self.kv_store[k] for k in matching_keys[:limit]]
+        if not self.sorted_keys:
+            self.sorted_keys = sorted(self.kv_store.keys())
+            HBaseSeismicStore._shared_sorted_keys = self.sorted_keys
+
+        import bisect
+        start_idx = bisect.bisect_left(self.sorted_keys, prefix)
+        results = []
+        for i in range(start_idx, min(start_idx + limit * 5, len(self.sorted_keys))):
+            k = self.sorted_keys[i]
+            if not k.startswith(prefix):
+                break
+            results.append(self.kv_store[k])
+            if len(results) >= limit:
+                break
         return results
 
     def _save_local_store(self):
+        HBaseSeismicStore._shared_kv_store = self.kv_store
+        self.sorted_keys = sorted(self.kv_store.keys())
+        HBaseSeismicStore._shared_sorted_keys = self.sorted_keys
         HBASE_STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(HBASE_STORE_FILE, "w", encoding="utf-8") as f:
             json.dump(self.kv_store, f, indent=2)
@@ -94,6 +117,9 @@ class HBaseSeismicStore:
             try:
                 with open(HBASE_STORE_FILE, "r", encoding="utf-8") as f:
                     self.kv_store = json.load(f)
+                self.sorted_keys = sorted(self.kv_store.keys())
+                HBaseSeismicStore._shared_kv_store = self.kv_store
+                HBaseSeismicStore._shared_sorted_keys = self.sorted_keys
             except Exception as e:
                 print(f"[WARN] Could not load existing HBase store: {e}")
 

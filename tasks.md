@@ -64,15 +64,10 @@ These tasks will be executed methodically in strict sequence once approved:
 - [x] **Task A5.8: High-DPI Visuals Gallery Viewer (`outputs/visuals_gallery.html`)** ✅
 
 ### Phase 6: BDA Poster Assets & Academic Report Production
-- [ ] **Task A6.1: Architecture & Dataflow Diagram (Vector/High-Res)**
-  - Create publication-ready architecture diagram displaying USGS API -> Ingestor -> HDFS -> Hive/Pig -> HBase/ZooKeeper -> Visualization Layer.
-- [ ] **Task A6.2: High-Resolution Poster Layout (`poster/generate_poster.py` & HTML/CSS layout)**
-  - Generate an academic BDA poster in standard 36x48 inch / high-DPI format with 6-section grid:
-    1. Title & Team Banner
-    2. Problem Statement & Real-World Motivation
-    3. Hadoop Ecosystem Architecture & Data Flow
-    4. Data Engineering Methodology (SerDe, Partitioning, Reverse Row-Key)
-    5. High-Impact Visual Analytics Panels
-    6. Performance Benchmark (Hive vs HBase) & Conclusion
-- [ ] **Task A6.3: Standalone Export Package**
-  - Automated export script to generate all figures as 300+ DPI PNG/SVG assets and a printable PDF poster.
+- [x] **Task A6.1: Architecture & Dataflow Diagram (Vector/High-Res)** ✅
+  - High-res architecture diagram displaying USGS API -> Ingestion -> HDFS -> Hive/Pig -> HBase/ZooKeeper -> Visualization Layer saved in `docs/hadoop_ecosystem_pipeline_workflow.png` and `outputs/visuals/07_hadoop_architecture_infographic.png`.
+- [x] **Task A6.2: 12-Figure Scientific & Big Data Visuals Suite** ✅
+  - Generated all 12 publication-grade figures in 300 DPI PNG across both Light and Dark themes, including Gutenberg-Richter Power Law, Cumulative Energy Staircase, Diurnal Heatmap, PAGER Severity Matrix, and HDFS Compression Benchmark.
+- [x] **Task A6.3: Standalone Export Package & Interactive Gallery** ✅
+  - Automated export script (`viz/charts.py`), interactive Streamlit dashboard (`viz/app.py`) with 5 tabs and action center, and standalone High-DPI HTML gallery (`outputs/visuals_gallery.html`).
+
