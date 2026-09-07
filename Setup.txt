@@ -1,0 +1,92 @@
+Before the pipeline, you need to decide between two setup paths — this decision matters more than any individual install step, so make it first.
+
+DECISION POINT DOCKER VS NATIVE INSTALL
+
+Docker-based (recommended for a mini project) a pre-built multi-container Hadoop ecosystem (HDFS, YARN, Hive, HBase, Zookeeper all wired together) comes up in minutes, is reproducible, and is trivial to tear downrebuild when something breaks — which it will. The tradeoff you don't personally configure core-site.xml etc., so if your course specifically grades did you configure Hadoop yourself, this weakens that part.
+
+Native pseudo-distributed install everything on one machine, but you hand-configure each component. More defensible if your rubric checks setup understanding, but every version-mismatch (HadoopHiveHBase compatibility is notoriously fussy) becomes your problem to debug, and this alone can eat a full day.
+
+Given you called this a quick and easy to run mini project earlier, I'd default to Docker. Below is the methodical setup for that path, with the native path outlined briefer afterward in case your course requires it.
+
+PATH A — DOCKER-BASED SETUP
+
+Step 1 Install prerequisites
+- Install Docker Desktop (WindowsMac) or Docker Engine + Docker Compose (Linux)
+- Allocate at least 6-8GB RAM to Docker (Settings  Resources) — the Hadoop ecosystem is memory-hungry even idle
+- Verify `docker --version` and `docker compose version` both return without error
+
+Step 2 Get a Hadoop ecosystem compose stack
+- Use a maintained multi-container project such as big-data-europedocker-hadoop (has separate images for namenode, datanode, resourcemanager, nodemanager, historyserver) — clone or download its docker-compose.yml
+- If you also want HiveHBase in the same stack, look for an extended compose file that layers those on (several community forks exist); alternatively run Hadoop core via one compose file and add HiveHBase as separate containers pointed at the same HDFSnetwork
+- Read through the compose file once before running it — know which ports map to which UI (namenode UI is typically 9870, resourcemanager UI 8088)
+
+Step 3 Bring the stack up
+- `docker compose up -d` from the directory containing the compose file
+- `docker ps` to confirm all containers are running and not restarting in a loop (a restart loop usually means a memory or config issue)
+- Open the Namenode web UI (localhost9870) and ResourceManager UI (localhost8088) in a browser to confirm HDFS and YARN are healthy
+
+Step 4 Verify HDFS works
+- `docker exec -it namenode bash` to get a shell inside the container
+- `hdfs dfs -mkdir raw` and `hdfs dfs -mkdir processed` to create your landing directories from the pipeline design
+- `hdfs dfs -ls ` to confirm they exist
+
+Step 5 Verify Hive works (if included in your stack)
+- Connect via `beeline` or `hive` CLI inside the Hive container
+- Run a trivial `CREATE TABLE test (id INT); SHOW TABLES;` to confirm the metastore is reachable
+
+Step 6 Verify HBase works
+- `docker exec -it hbase bash`, then `hbase shell`
+- Run `create 'test', 'cf'` then `list` to confirm the table exists and Zookeeper (usually bundled in the HBase container or as its own container) is coordinating correctly
+
+PATH B — NATIVE PSEUDO-DISTRIBUTED SETUP (if Docker isn't an option or your course requires manual config)
+
+Step 1 OS layer
+- On Windows install WSL2 with an Ubuntu distro (Hadoop's tooling assumes a Linux environment; native Windows support is painful and not worth it for a course project)
+- On MacLinux work directly in your terminal
+
+Step 2 Java
+- Install a JDK version compatible with your target Hadoop version (Hadoop 3.3.x works with JDK 8 or 11 — check the release notes for your exact version, since Hadoop-Java compatibility is a common source of silent failures)
+- Set JAVA_HOME in your shell profile
+
+Step 3 SSH setup
+- Hadoop's daemons communicate over SSH even in single-node mode
+- Install openssh-server, generate a keypair (`ssh-keygen -t rsa`), copy the public key into authorized_keys so `ssh localhost` works without a password prompt
+
+Step 4 Download and configure Hadoop
+- Download a stable Hadoop release tarball, extract it, set HADOOP_HOME and add its binsbin to PATH
+- Edit core-site.xml (fs.defaultFS pointing to localhost), hdfs-site.xml (replication factor 1, namenodedatanode data directories), mapred-site.xml (framework name yarn), yarn-site.xml (nodemanager aux-services)
+- Format the namenode once `hdfs namenode -format`
+- Start everything `start-dfs.sh` and `start-yarn.sh`
+- Verify via the same web UIs as above (9870, 8088)
+
+Step 5 Install Hive on top
+- Download Hive, set HIVE_HOME, configure hive-site.xml to point at a metastore (Derby is fine for a single-user course project; skip MySQL setup unless required)
+- Initialize the metastore schema, then confirm `hive` CLI launches and can create a table
+
+Step 6 Install HBase on top
+- Download HBase, set HBASE_HOME, configure hbase-site.xml for standalone or pseudo-distributed mode, pointing it at your HDFS instance rather than local filesystem
+- HBase bundles its own Zookeeper for standalone mode — no separate install needed unless you want a dedicated Zookeeper ensemble
+- Start with `start-hbase.sh`, confirm via `hbase shell`
+
+Step 7 Install Pig (lighter weight, quick)
+- Download Pig, set PIG_HOME, run in local or mapreduce mode depending on whether you want it hitting your actual HDFSYARN cluster
+
+COMMON TO BOTH PATHS — YOUR PYTHONVISUALIZATION ENVIRONMENT
+
+This sits outside Hadoop entirely and is where your ingestion script and all charting happens
+- Install Python 3.x (a virtual environment is worth it `python -m venv venv`)
+- Install `requests` (hit the USGS API), `pandas` (flattenaggregate before export if you want a quick local sanity check), `plotly` (maps and charts), `hdfs` or `pyarrow` if you want to write to HDFS directly from Python instead of shelling out to `hdfs dfs -put`
+- If your ingestion script runs outside the Docker network, you'll push files in via `docker cp` then `hdfs dfs -put` inside the container, or mount a shared volume in your compose file so the script can write directly to a path HDFS watches
+
+VERIFICATION CHECKLIST BEFORE YOU START THE ACTUAL PROJECT
+
+Before writing any ingestion or Hive logic, confirm all of these independently work
+1. HDFS can create a directory and put a test file
+2. YARN ResourceManager UI shows no dead nodes
+3. Hive can create a table and select from it
+4. HBase can create a table and putget a row
+5. Your Python environment can hit the USGS API URL and get a valid JSON response
+
+Only once all five pass independently should you start wiring them together — debugging is it Hadoop or is it my script at the same time as is it my script or is it the API is the single biggest time sink in projects like this.
+
+Want the exact docker-compose.yml contents next, or the Python ingestion script first

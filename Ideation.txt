@@ -1,0 +1,71 @@
+Real-Time Earthquake Feed (USGS)
+USGS publishes a live GeoJSON feed of global earthquakes updated every 5 minutes — this is the angle if you want to show streaming ingestion rather than just static batch loads.
+STAGE 0 — WHAT YOU'RE ACTUALLY DEMONSTRATING
+
+The point of this angle is to show a component doing something batch pipelines can't: pulling live, continuously-updating data and making it queryable in near-real-time. Every design choice below should reinforce that "streaming" story — don't let it quietly become a one-time batch load, or you lose the differentiator.
+
+Source: USGS Earthquake Hazards Program publishes GeoJSON feeds at several update frequencies (every 5 minutes, hourly, daily) at time windows (past hour, past day, past week, past month). For a live-feel demo, use the "past hour, updated every minute" or "past day, updated every 5 minutes" feed.
+
+STAGE 1 — INGESTION
+
+Two ways to do this, pick based on how much "real Hadoop" your grading rubric wants:
+
+Option A (simple, defensible): a cron job every 5 minutes runs a script (Python/curl) that:
+1. Hits the USGS feed URL
+2. Saves the raw GeoJSON response as a timestamped file (e.g. quakes_2026-09-07_1005.json)
+3. Pushes it into HDFS with `hdfs dfs -put` into a landing directory partitioned by date/hour (e.g. /raw/earthquakes/2026/09/07/10/)
+
+Option B (closer to "real" streaming, more setup): use Apache Flume with a custom source (Flume doesn't have a built-in HTTP-polling source, so you'd write a small Flume "Exec Source" that runs your curl/python script on an interval, or use a Spool Directory source where your script drops files into a watched folder and Flume picks them up and writes them to HDFS). This is more legitimate for the "ecosystem component" checklist but is genuinely more setup for not much extra pipeline value — cron+HDFS put is fine to defend if you're honest about the tradeoff in your report.
+
+Either way, land data in HDFS as raw JSON, partitioned by ingestion time. Do not parse/clean at ingestion time — keep raw and processed separate (this is a standard data-lake practice worth mentioning in your writeup).
+
+STAGE 2 — STORAGE LAYOUT (HDFS)
+
+/raw/earthquakes/YYYY/MM/DD/HH/*.json — raw landing zone, append-only
+/processed/earthquakes/ — cleaned, flattened Hive-external-table-backed data, partitioned by date
+
+Partitioning by date/hour matters for two reasons: it keeps small-file counts from exploding (HDFS hates millions of tiny files — mention this as a known challenge you handled), and it lets Hive prune partitions when you query by time window.
+
+STAGE 3 — PROCESSING (Hive / Pig)
+
+First, flatten the nested GeoJSON into a tabular schema. Each earthquake "feature" has: magnitude, place, time, longitude, latitude, depth, felt reports, tsunami flag, alert level, etc.
+
+Use Hive with a JSON SerDe (org.apache.hive.hcatalog.data.JsonSerDe or org.openx.data.jsonserde.JsonSerDe) to create an external table directly over the raw JSON, OR write a Pig script to flatten first and land cleaned Parquet/ORC files, then create a Hive table over that. Pig is more defensible here if your rubric wants Pig used for something non-trivial — flattening nested JSON is a legitimate Pig use case (Hive JSON SerDes can feel like "Hive did everything").
+
+Aggregations to compute (these become your visuals directly, so design them backward from the chart you want):
+- Count and average magnitude by region (bucket lat/long into rough geographic zones, or reverse-geocode "place" strings into country/state) and by hour — feeds the live map and the time-series chart
+- Magnitude-depth correlation table — feeds the scatter plot
+- Rolling count per fixed time window (e.g. last hour, last 6 hours, last 24 hours) — feeds the "activity is spiking" panel, which is the single most convincing visual for the streaming story
+- Max magnitude and alert-level counts per region — feeds a summary table/scorecard
+
+Schedule this with Oozie (or even just a second cron job) to re-run every time a new batch lands, so your aggregated tables are themselves "near-real-time."
+
+STAGE 4 — SERVING (HBase)
+
+Design the HBase row key around the query pattern you actually want fast: region + timestamp (e.g. rowkey = region#reverse-timestamp) so a region lookup returns most-recent-first without a full scan. Column families: `event` (magnitude, depth, place, time), `meta` (alert, tsunami flag, felt count).
+
+Write into HBase from your Hive/Pig aggregation step (via Hive-HBase storage handler, or a small script using the HBase Python/Java client). The pitch for this layer in your report: HDFS/Hive is great for batch analytical queries but slow for "give me the last 20 events near Region X right now" — HBase is the component that makes that fast, which is the actual reason it exists in the ecosystem rather than just being there for checklist completeness.
+
+Zookeeper coordinates HBase's region servers under the hood — worth one diagram callout, not a separate thing you build.
+
+STAGE 5 — VISUALIZATION (this is where "high quality" is won or lost)
+
+Do not visualize from Hadoop directly. Export small, pre-aggregated result sets (a few hundred to a few thousand rows) from Hive/HBase to CSV/JSON, then build visuals in a proper visualization layer:
+
+1. Live world map — plot each earthquake as a point sized by magnitude and colored by depth (shallow = red/orange, deep = blue), refreshed on each ingestion cycle. Use Plotly (scatter_geo or Mapbox) in Python, or Kepler.gl / Tableau if you want zero-code polish. This is your headline visual — put it first in any report or demo.
+
+2. Magnitude-over-time strip chart — x-axis time, y-axis magnitude, one dot per event, so viewers see clustering/spikes visually without reading a table.
+
+3. Rolling activity count — a simple line/area chart of "earthquakes per hour" over the last 24-48 hours. This is the chart that visually proves your pipeline is actually live, if you screenshot it at two different times during your demo and show the line has moved.
+
+4. Depth vs magnitude scatter, colored by region — shows whether deep or shallow quakes trend stronger in your sampled window; a genuine analytical finding, not just a decoration.
+
+5. Regional summary table/scorecard — top 5 most active regions in the current window, pulled straight from your HBase near-real-time query, to visually justify why HBase exists in the pipeline (contrast it against a slower Hive query for the same lookup — a side-by-side latency comparison is a strong, easy-to-build "so what" for your report).
+
+For polish specifically: keep a single consistent color scale (magnitude or depth) across all charts, use a dark or muted basemap for the geo plot so colored points pop, and if you can, animate the world map over your ingestion window (Plotly supports frame-based animation) — a 10-second GIF of quakes appearing over the last day is the single highest-impact visual for a "streaming" pitch and takes maybe 20 extra minutes to build.
+
+STAGE 6 — WHAT TO PUT IN THE ARCHITECTURE DIAGRAM
+
+USGS API → (cron/script) → HDFS raw zone → Hive/Pig flatten+aggregate → HDFS processed zone → HBase (near-real-time serving) → Python/Tableau visualization layer, with Oozie shown as the orchestrator sitting alongside the Hive/Pig step and Zookeeper shown as a small box under HBase.
+
+Want me to generate that architecture diagram now, or write out the actual ingestion script and Hive DDL/SerDe setup next?

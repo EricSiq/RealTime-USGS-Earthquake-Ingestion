@@ -1,0 +1,162 @@
+version: "3.8"
+
+services:
+  # -------------------------------------------------------------
+  # HDFS NAMENODE: Manages filesystem namespace and block metadata
+  # Web UI: http://localhost:9870 | IPC: 9000 / 8020
+  # -------------------------------------------------------------
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-namenode
+    restart: always
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    environment:
+      - CLUSTER_NAME=seismic_cluster
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_replication=1
+      - HDFS_CONF_dfs_permissions_enabled=false
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+      - ./data/shared:/shared_data
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # HDFS DATANODE: Stores and replicates raw & processed blocks
+  # -------------------------------------------------------------
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: bda-datanode
+    restart: always
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_replication=1
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # YARN RESOURCEMANAGER: Orchestrates compute resources
+  # Web UI: http://localhost:8088
+  # -------------------------------------------------------------
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: bda-resourcemanager
+    restart: always
+    depends_on:
+      - namenode
+      - datanode
+    ports:
+      - "8088:8088"
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # YARN NODEMANAGER: Launches map/reduce & Hive task containers
+  # -------------------------------------------------------------
+  nodemanager:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: bda-nodemanager
+    restart: always
+    depends_on:
+      - resourcemanager
+    ports:
+      - "8042:8042"
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - YARN_CONF_yarn_resourcemanager_hostname=resourcemanager
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # APACHE ZOOKEEPER: Distributed coordination for HBase
+  # Client Port: 2181
+  # -------------------------------------------------------------
+  zookeeper:
+    image: zookeeper:3.8.4
+    container_name: bda-zookeeper
+    restart: always
+    ports:
+      - "2181:2181"
+    environment:
+      - ZOO_MY_ID=1
+      - ZOO_PORT=2181
+    volumes:
+      - zookeeper_data:/data
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # APACHE HBASE (Master + RegionServer)
+  # Web UI: http://localhost:16010 | REST API: 8080
+  # -------------------------------------------------------------
+  hbase:
+    image: harisekhon/hbase:latest
+    container_name: bda-hbase
+    restart: always
+    depends_on:
+      - zookeeper
+      - namenode
+    ports:
+      - "16010:16010"
+      - "16020:16020"
+      - "16030:16030"
+      - "8080:8080"
+    environment:
+      - HBASE_ZOOKEEPER_QUORUM=zookeeper
+    volumes:
+      - hbase_data:/hbase-data
+      - ./data/shared:/shared_data
+    networks:
+      - hadoop_net
+
+  # -------------------------------------------------------------
+  # APACHE HIVE SERVER & METASTORE
+  # JDBC/Thrift: 10000 | Web UI: 10002
+  # -------------------------------------------------------------
+  hive-server:
+    image: bde2020/hive:2.3.2-postgresql-metastore
+    container_name: bda-hive-server
+    restart: always
+    depends_on:
+      - namenode
+      - resourcemanager
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    environment:
+      - HIVE_CORE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://hive-metastore-db:5432/metastore
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    networks:
+      - hadoop_net
+
+  hive-metastore-db:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    container_name: bda-hive-db
+    restart: always
+    environment:
+      - POSTGRES_DB=metastore
+      - POSTGRES_USER=hive
+      - POSTGRES_PASSWORD=hive
+    networks:
+      - hadoop_net
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
+  zookeeper_data:
+  hbase_data:
+
+networks:
+  hadoop_net:
+    driver: bridge
